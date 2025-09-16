@@ -1,0 +1,11 @@
+<!-- Directory.Build.props -->
+<Project>
+  <PropertyGroup>
+    <!-- keep all NuGet packages inside this repo -->
+    <RestorePackagesPath>$(MSBuildThisFileDirectory)cache\packages</RestorePackagesPath>
+
+    <!-- optional niceties -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>
