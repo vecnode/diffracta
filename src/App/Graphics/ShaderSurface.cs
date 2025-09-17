@@ -9,30 +9,32 @@ using System.Text;
 
 namespace AvaloniaVideoSynth.Graphics;
 
-public sealed class ShaderSurface : OpenGlControlBase
-{
+public sealed class ShaderSurface : OpenGlControlBase {
     private GLLoader? _gl;
     private uint _program = 0;
+    private uint _postProgram = 0;
     private uint _vao = 0;
     private uint _vbo = 0;
+    private uint _framebuffer = 0;
+    private uint _texture = 0;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private int _uTime = -1, _uRes = -1;
+    private int _uSaturation = -1;
 
     private string? _currentFragPath;
     private string? _loadedFragPath;
-    private bool _forceReload = false;
     private Action<string>? _logCallback;
+    private float _saturation = 1.0f;
 
-    public void SetLogCallback(Action<string> callback)
-    {
+    public void SetLogCallback(Action<string> callback) {
         _logCallback = callback;
     }
-
-    public void ForceReloadShader(string path)
-    {
-        _currentFragPath = path;
-        _forceReload = true;
+    
+    public float Saturation {
+        get => _saturation;
+        set => _saturation = Math.Clamp(value, 0.0f, 2.0f);
     }
+
 
     // A simple fullscreen triangle VS using traditional vertex data
     private const string VertexSrc = """
@@ -61,8 +63,30 @@ public sealed class ShaderSurface : OpenGlControlBase
         }
         """;
 
-    protected override void OnOpenGlInit(GlInterface gl)
-    {
+    // Post-processing fragment shader
+    private const string PostProcessFrag = """
+        #version 300 es
+        precision mediump float;
+        out vec4 FragColor;
+        in vec2 vUV;
+        uniform sampler2D u_inputTexture;
+        uniform float u_saturation;
+        uniform vec2 u_resolution;
+        void main() {
+            vec2 uv = vUV;
+            vec4 color = texture(u_inputTexture, uv);
+            
+            // Convert to grayscale
+            float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+            
+            // Apply saturation
+            color.rgb = mix(vec3(gray), color.rgb, u_saturation);
+            
+            FragColor = color;
+        }
+        """;
+
+    protected override void OnOpenGlInit(GlInterface gl) {
         try
         {
             _gl = new GLLoader(gl);
@@ -93,6 +117,13 @@ public sealed class ShaderSurface : OpenGlControlBase
 
             // Don't build shaders here - wait until first render
             _program = 0; // Will be built on first render
+            
+            // Build post-processing program
+            _postProgram = BuildProgram(VertexSrc, PostProcessFrag, out var postBuildLog);
+            if (_postProgram == 0)
+            {
+                _logCallback?.Invoke($"Failed to build post-processing program: {postBuildLog}");
+            }
 
             RequestNextFrameRendering();
         }
@@ -109,8 +140,7 @@ public sealed class ShaderSurface : OpenGlControlBase
         }
     }
 
-    protected override void OnOpenGlRender(GlInterface gl, int fb)
-    {
+    protected override void OnOpenGlRender(GlInterface gl, int fb) {
         if (_gl is null) return;
 
         // Build shader program on first render if not already built
@@ -128,8 +158,8 @@ public sealed class ShaderSurface : OpenGlControlBase
         // Always check for pending shader to load (for switching between shaders)
         if (!string.IsNullOrEmpty(_currentFragPath) && File.Exists(_currentFragPath))
         {
-            // Only load if it's different from what's currently loaded OR if force reload is set
-            bool needsLoad = _forceReload || _loadedFragPath == null || 
+            // Only load if it's different from what's currently loaded
+            bool needsLoad = _loadedFragPath == null || 
                            !string.Equals(Path.GetFullPath(_loadedFragPath), Path.GetFullPath(_currentFragPath), StringComparison.OrdinalIgnoreCase);
             
             if (needsLoad)
@@ -141,35 +171,78 @@ public sealed class ShaderSurface : OpenGlControlBase
                 {
                     _program = program;
                     _loadedFragPath = _currentFragPath;
-                    _forceReload = false; // Reset force reload flag
                     CacheUniforms();
                     _logCallback?.Invoke($"Successfully loaded shader: {Path.GetFileName(_currentFragPath)}");
                 }
                 else
                 {
-                    _forceReload = false; // Reset force reload flag even on failure
                     _logCallback?.Invoke($"Failed to load shader: {pendingBuildLog}");
                 }
             }
         }
 
-        try
-        {
+        try {
             var scale = VisualRoot?.RenderScaling ?? 1.0;
             int w = Math.Max(1, (int)(Bounds.Width * scale));
             int h = Math.Max(1, (int)(Bounds.Height * scale));
 
-            _gl.glViewport(0, 0, w, h);
-            _gl.glClearColor(0, 0, 0, 1);
-            _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
+            // Check if we need post-processing (saturation != 1.0)
+            bool needsPostProcessing = Math.Abs(_saturation - 1.0f) > 0.001f;
 
-            _gl.glUseProgram(_program);
+            if (needsPostProcessing && _postProgram != 0)
+            {
+                // TWO-PASS RENDERING: Main shader -> Framebuffer -> Post-processing -> Screen
+                
+                // Create framebuffer and texture if needed
+                if (_framebuffer == 0)
+                {
+                    CreateFramebuffer(w, h);
+                }
 
-            if (_uTime >= 0) _gl.glUniform1f(_uTime, (float)_clock.Elapsed.TotalSeconds);
-            if (_uRes  >= 0) _gl.glUniform2f(_uRes, w, h);
+                // PASS 1: Render main shader to framebuffer
+                _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _framebuffer);
+                _gl.glViewport(0, 0, w, h);
+                _gl.glClearColor(0, 0, 0, 1);
+                _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
 
-            _gl.glBindVertexArray(_vao);
-            _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                _gl.glUseProgram(_program);
+                if (_uTime >= 0) _gl.glUniform1f(_uTime, (float)_clock.Elapsed.TotalSeconds);
+                if (_uRes  >= 0) _gl.glUniform2f(_uRes, w, h);
+
+                _gl.glBindVertexArray(_vao);
+                _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+
+                // PASS 2: Render post-processing to screen
+                _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, (uint)fb); // fb is the default framebuffer
+                _gl.glViewport(0, 0, w, h);
+                _gl.glClearColor(0, 0, 0, 1);
+                _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
+
+                _gl.glUseProgram(_postProgram);
+                _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _texture);
+                _gl.glUniform1i(_gl.glGetUniformLocation(_postProgram, "u_inputTexture"), 0);
+                if (_uSaturation >= 0) _gl.glUniform1f(_uSaturation, _saturation);
+                if (_uRes >= 0) _gl.glUniform2f(_uRes, w, h);
+
+                _gl.glBindVertexArray(_vao);
+                _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+            }
+            else
+            {
+                // SINGLE-PASS RENDERING: Main shader directly to screen (original behavior)
+                _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, (uint)fb); // fb is the default framebuffer
+                _gl.glViewport(0, 0, w, h);
+                _gl.glClearColor(0, 0, 0, 1);
+                _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
+
+                _gl.glUseProgram(_program);
+                if (_uTime >= 0) _gl.glUniform1f(_uTime, (float)_clock.Elapsed.TotalSeconds);
+                if (_uRes  >= 0) _gl.glUniform2f(_uRes, w, h);
+
+                _gl.glBindVertexArray(_vao);
+                _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+            }
 
             RequestNextFrameRendering(); // animate
         }
@@ -180,31 +253,64 @@ public sealed class ShaderSurface : OpenGlControlBase
         }
     }
 
-    protected override void OnOpenGlDeinit(GlInterface gl)
-    {
+    protected override void OnOpenGlDeinit(GlInterface gl) {
         if (_gl != null)
         {
             if (_vbo != 0) _gl.glDeleteBuffers(1, ref _vbo);
             if (_vao != 0) _gl.glDeleteVertexArrays(1, ref _vao);
             if (_program != 0) _gl.glDeleteProgram(_program);
+            if (_postProgram != 0) _gl.glDeleteProgram(_postProgram);
+            if (_texture != 0) _gl.glDeleteTextures(1, ref _texture);
+            if (_framebuffer != 0) _gl.glDeleteFramebuffers(1, ref _framebuffer);
         }
     }
 
-    public void LoadFragmentShaderFromFile(string path, out string message)
-    {
+    public void LoadFragmentShaderFromFile(string path, out string message) {
         _currentFragPath = path;
-        message = $"Queued: {Path.GetFileName(path)}";
+        message = $"Running: {Path.GetFileName(path)}";
     }
 
-    private void CacheUniforms()
-    {
+    private void CacheUniforms() {
         if (_gl is null) return;
         _uTime = _gl.glGetUniformLocation(_program, "u_time");
         _uRes  = _gl.glGetUniformLocation(_program, "u_resolution");
+        
+        // Cache post-processing uniforms
+        if (_postProgram != 0)
+        {
+            _uSaturation = _gl.glGetUniformLocation(_postProgram, "u_saturation");
+        }
     }
 
-    private uint BuildProgram(string vertex, string fragment, out string buildLog)
+    private void CreateFramebuffer(int width, int height)
     {
+        if (_gl is null) return;
+
+        // Create texture
+        _gl.glGenTextures(1, out _texture);
+        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _texture);
+        _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+
+        // Create framebuffer
+        _gl.glGenFramebuffers(1, out _framebuffer);
+        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _framebuffer);
+        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _texture, 0);
+
+        // Check framebuffer status
+        var status = _gl.glCheckFramebufferStatus(GLLoader.GL_FRAMEBUFFER);
+        if (status != GLLoader.GL_FRAMEBUFFER_COMPLETE)
+        {
+            _logCallback?.Invoke($"Framebuffer creation failed: {status}");
+        }
+        else
+        {
+            _logCallback?.Invoke("Framebuffer created successfully");
+        }
+    }
+
+    private uint BuildProgram(string vertex, string fragment, out string buildLog) {
         buildLog = string.Empty;
         if (_gl is null) 
         {
@@ -240,8 +346,7 @@ public sealed class ShaderSurface : OpenGlControlBase
         return prog;
     }
 
-    private string ConvertToOpenGLES(string src)
-    {
+    private string ConvertToOpenGLES(string src) {
         // Ensure the shader has a #version; add one if missing
         if (!src.TrimStart().StartsWith("#version"))
             src = "#version 330 core\n" + src;
@@ -281,8 +386,7 @@ public sealed class ShaderSurface : OpenGlControlBase
         return string.Join("\n", converted);
     }
 
-    private uint Compile(uint type, string src, out string log)
-    {
+    private uint Compile(uint type, string src, out string log) {
         log = string.Empty;
         if (_gl is null) 
         {

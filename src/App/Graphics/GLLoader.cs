@@ -51,6 +51,21 @@ internal sealed class GLLoader
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteVertexArrays_d(int n, ref uint arrays);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteProgram_d(uint program);
 
+    // Texture and Framebuffer functions
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenTextures_d(int n, out uint textures);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindTexture_d(uint target, uint texture);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glTexImage2D_d(uint target, int level, int internalformat, int width, int height, int border, uint format, uint type, IntPtr pixels);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glTexParameteri_d(uint target, uint pname, int param);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteTextures_d(int n, ref uint textures);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glActiveTexture_d(uint texture);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glUniform1i_d(int location, int value);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenFramebuffers_d(int n, out uint framebuffers);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindFramebuffer_d(uint target, uint framebuffer);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glFramebufferTexture2D_d(uint target, uint attachment, uint textarget, uint texture, int level);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate uint glCheckFramebufferStatus_d(uint target);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteFramebuffers_d(int n, ref uint framebuffers);
+
     // --- Constants ---
     public const uint GL_COLOR_BUFFER_BIT = 0x00004000;
     public const uint GL_FRAGMENT_SHADER  = 0x8B30;
@@ -61,6 +76,20 @@ internal sealed class GLLoader
     public const uint GL_ARRAY_BUFFER     = 0x8892;
     public const uint GL_STATIC_DRAW      = 0x88E4;
     public const uint GL_FLOAT           = 0x1406;
+
+    // Texture constants
+    public const uint GL_TEXTURE_2D       = 0x0DE1;
+    public const uint GL_TEXTURE0         = 0x84C0;
+    public const uint GL_RGBA             = 0x1908;
+    public const uint GL_UNSIGNED_BYTE    = 0x1401;
+    public const uint GL_TEXTURE_MIN_FILTER = 0x2801;
+    public const uint GL_TEXTURE_MAG_FILTER = 0x2800;
+    public const uint GL_LINEAR           = 0x2601;
+
+    // Framebuffer constants
+    public const uint GL_FRAMEBUFFER      = 0x8D40;
+    public const uint GL_COLOR_ATTACHMENT0 = 0x8CE0;
+    public const uint GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 
     // --- Loaded funcs ---
     public glViewport_d glViewport = null!;
@@ -95,6 +124,21 @@ internal sealed class GLLoader
     public glDeleteBuffers_d glDeleteBuffers = null!;
     public glDeleteVertexArrays_d glDeleteVertexArrays = null!;
     public glDeleteProgram_d glDeleteProgram = null!;
+
+    // Texture and Framebuffer functions
+    public glGenTextures_d glGenTextures = null!;
+    public glBindTexture_d glBindTexture = null!;
+    public glTexImage2D_d glTexImage2D = null!;
+    public glTexParameteri_d glTexParameteri = null!;
+    public glDeleteTextures_d glDeleteTextures = null!;
+    public glActiveTexture_d glActiveTexture = null!;
+    public glUniform1i_d glUniform1i = null!;
+
+    public glGenFramebuffers_d glGenFramebuffers = null!;
+    public glBindFramebuffer_d glBindFramebuffer = null!;
+    public glFramebufferTexture2D_d glFramebufferTexture2D = null!;
+    public glCheckFramebufferStatus_d glCheckFramebufferStatus = null!;
+    public glDeleteFramebuffers_d glDeleteFramebuffers = null!;
 
     public void Initialize()
     {
@@ -133,6 +177,21 @@ internal sealed class GLLoader
             glDeleteBuffers = Load<glDeleteBuffers_d>("glDeleteBuffers");
             glDeleteVertexArrays = Load<glDeleteVertexArrays_d>("glDeleteVertexArrays");
             glDeleteProgram = Load<glDeleteProgram_d>("glDeleteProgram");
+
+            // Load texture and framebuffer functions
+            glGenTextures = Load<glGenTextures_d>("glGenTextures");
+            glBindTexture = Load<glBindTexture_d>("glBindTexture");
+            glTexImage2D = Load<glTexImage2D_d>("glTexImage2D");
+            glTexParameteri = Load<glTexParameteri_d>("glTexParameteri");
+            glDeleteTextures = Load<glDeleteTextures_d>("glDeleteTextures");
+            glActiveTexture = Load<glActiveTexture_d>("glActiveTexture");
+            glUniform1i = Load<glUniform1i_d>("glUniform1i");
+
+            glGenFramebuffers = Load<glGenFramebuffers_d>("glGenFramebuffers");
+            glBindFramebuffer = Load<glBindFramebuffer_d>("glBindFramebuffer");
+            glFramebufferTexture2D = Load<glFramebufferTexture2D_d>("glFramebufferTexture2D");
+            glCheckFramebufferStatus = Load<glCheckFramebufferStatus_d>("glCheckFramebufferStatus");
+            glDeleteFramebuffers = Load<glDeleteFramebuffers_d>("glDeleteFramebuffers");
         }
         catch (Exception ex)
         {

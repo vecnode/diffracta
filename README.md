@@ -2,11 +2,12 @@
 
 This repository contains a template for a .NET GLSL application built with [Avalonia UI](https://avaloniaui.net/). The purpose is to build a live shader editing and real-time (perhaps neural) rendering. 
 
-![Avalonia Video Synth](media/20250916.png)
+![Avalonia Video Synth](media/20250918.png)
 
 ### 
 ```powershell
 # Option 1: PowerShell Scripts (Recommended)
+# First time setup
 .\update.ps1
 .\start.ps1
 # Option 2: Direct .NET Commands

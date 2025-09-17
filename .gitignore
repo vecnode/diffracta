@@ -351,3 +351,6 @@ FodyWeavers.xsd
 
 # Custom cache directory
 cache/
+
+# Logs directory
+logs/

@@ -1,7 +1,16 @@
 # Update and Setup Folder Script for Avalonia Video Synth Application
-# not tested
+# Uses local package cache in ./cache directory
 
 Write-Host "=== Avalonia Video Synth - Environment Setup ===" -ForegroundColor Green
+
+# Create local cache directory if it doesn't exist
+if (-not (Test-Path "cache")) {
+    Write-Host "Creating local package cache directory" -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path "cache" -Force | Out-Null
+    Write-Host "Local cache created: ./cache" -ForegroundColor Green
+} else {
+    Write-Host "Local cache directory exists: ./cache" -ForegroundColor Green
+}
 
 # Check if .NET is installed
 Write-Host "Checking .NET installation" -ForegroundColor Yellow
@@ -22,11 +31,13 @@ if (-not (Test-Path "src/App/AvaloniaVideoSynth.csproj")) {
 
 Write-Host "`nChecking project dependencies" -ForegroundColor Yellow
 
-# Restore NuGet packages
-Write-Host "Restoring NuGet packages" -ForegroundColor Yellow
+# Restore NuGet packages to local cache
+Write-Host "Restoring NuGet packages to local cache" -ForegroundColor Yellow
 try {
-    dotnet restore src/App/AvaloniaVideoSynth.csproj
-    Write-Host "Packages restored successfully" -ForegroundColor Green
+    # First, download packages to local cache
+    Write-Host "Downloading packages to ./cache directory" -ForegroundColor Cyan
+    dotnet restore src/App/AvaloniaVideoSynth.csproj --packages ./cache
+    Write-Host "Packages restored to local cache successfully" -ForegroundColor Green
 } catch {
     Write-Host "Failed to restore packages: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
@@ -66,12 +77,12 @@ foreach ($package in $requiredPackages) {
 }
 
 if ($missingPackages.Count -gt 0) {
-    Write-Host "`nInstalling missing packages" -ForegroundColor Yellow
+    Write-Host "`nInstalling missing packages to local cache" -ForegroundColor Yellow
     foreach ($package in $missingPackages) {
         try {
-            Write-Host "Installing $package" -ForegroundColor Yellow
-            dotnet add src/App/AvaloniaVideoSynth.csproj package $package
-            Write-Host "$package installed" -ForegroundColor Green
+            Write-Host "Installing $package to local cache" -ForegroundColor Yellow
+            dotnet add src/App/AvaloniaVideoSynth.csproj package $package --packages ./cache
+            Write-Host "$package installed to local cache" -ForegroundColor Green
         } catch {
             Write-Host "Failed to install $package`: $($_.Exception.Message)" -ForegroundColor Red
         }
@@ -99,12 +110,7 @@ try {
 }
 
 Write-Host "`n=== Environment Setup Complete ===" -ForegroundColor Green
+Write-Host "Packages are now stored locally in: ./cache" -ForegroundColor Cyan
 Write-Host "You can now run the application using: .\start.ps1" -ForegroundColor Cyan
 Write-Host "Or directly with: dotnet run --project src/App/AvaloniaVideoSynth.csproj" -ForegroundColor Cyan
 
-Write-Host "`n=== Avalonia OpenGL Shader Engine ===" -ForegroundColor Yellow
-Write-Host "Avalonia provides cross-platform OpenGL functionality:" -ForegroundColor White
-Write-Host "Windows: Uses native OpenGL drivers" -ForegroundColor Cyan
-Write-Host "Linux: Uses Mesa/OpenGL drivers" -ForegroundColor Cyan
-Write-Host "macOS: Uses Core OpenGL" -ForegroundColor Cyan
-Write-Host "`nNote: Shaders are loaded from the Shaders/ folder and auto-reloaded on changes." -ForegroundColor Green

@@ -3,30 +3,17 @@
 
 $ErrorActionPreference = 'Stop'
 
-# Create logs directory if it doesn't exist
-if (-not (Test-Path "logs")) {
-    New-Item -ItemType Directory -Path "logs" -Force | Out-Null
-}
-
-# Function to write timestamped logs
-function Write-Log {
-    param($Message, $Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] $Message"
-    Write-Host $logEntry
-    Add-Content -Path "logs/startup.log" -Value $logEntry
-}
 
 # Set execution policy for this process (Windows only)
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 }
 
-Write-Log "=== Avalonia Video Synth (GLSL) ===" "INFO"
+Write-Host "=== Avalonia Video Synth (GLSL) ===" -ForegroundColor Green
 
 # Function to cleanup on exit
 function Cleanup {
-    Write-Log "Cleaning up processes" "INFO"
+    Write-Host "Cleaning up processes" -ForegroundColor Yellow
     # Kill any lingering dotnet processes for this project
     Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Where-Object {
         $_.CommandLine -like "*AvaloniaVideoSynth*"
@@ -47,20 +34,21 @@ try {
 
 # Check if project exists
 if (-not (Test-Path "src/App/AvaloniaVideoSynth.csproj")) {
-    Write-Log "Error: Project file not found. Please run this script from the project root directory." "ERROR"
+    Write-Host "Error: Project file not found. Please run this script from the project root directory." -ForegroundColor Red
     exit 1
 }
 
 # Ensure Shaders directory exists
 $shadersDir = "src/App/Shaders"
 if (-not (Test-Path $shadersDir)) {
-    Write-Log "Creating Shaders directory: $shadersDir" "INFO"
+    Write-Host "Creating Shaders directory: $shadersDir" -ForegroundColor Yellow
 }
 
 try {
-    # Restore packages first
-    Write-Host "Restoring packages" -ForegroundColor Yellow
-    dotnet restore src/App/AvaloniaVideoSynth.csproj
+
+    # Restore packages to local cache first
+    Write-Host "Restoring packages to local cache" -ForegroundColor Yellow
+    dotnet restore src/App/AvaloniaVideoSynth.csproj --packages ./cache
 
     Write-Host "Building project" -ForegroundColor Yellow
     dotnet build src/App/AvaloniaVideoSynth.csproj
