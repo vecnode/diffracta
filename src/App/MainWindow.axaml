@@ -18,14 +18,18 @@
     <Style Selector="Slider#SaturationSlider">
       <Setter Property="Foreground" Value="#00ff88"/>
     </Style>
+    
+    <!-- Button styling - light grey background with black text -->
+    <Style Selector="Button">
+      <Setter Property="Background" Value="#d3d3d3"/>
+      <Setter Property="Foreground" Value="Black"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
   </Window.Styles>
   
-  <DockPanel>
-    <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top" Margin="8">
-      <TextBlock Text="Shader:" VerticalAlignment="Center"/>
-      <ComboBox x:Name="ShaderPicker" Width="320"/>
-      <TextBlock x:Name="StatusText" Margin="12,0,0,0" VerticalAlignment="Center"/>
-      <Button x:Name="ToggleLogButton" Content="Show Log" Margin="12,0,0,0" />
+  <DockPanel Background="#1e1e1e">
+    <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top" Margin="8" Background="#1e1e1e">
+      <Button x:Name="ToggleLogButton" Content="Show Log" />
       <Button x:Name="ToggleControllerButton" Content="Show Controller" Margin="8,0,0,0" />
       <Button x:Name="FullscreenButton" Content="Fullscreen" Margin="8,0,0,0" />
     </StackPanel>
@@ -38,8 +42,8 @@
         
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
             <TextBlock Text="Debug Log" Foreground="White" VerticalAlignment="Center"/>
-            <Button x:Name="ClearLogButton" Content="Clear" Width="60" Background="#333333" Foreground="White" BorderThickness="0"/>
-            <Button x:Name="CopyLogButton" Content="Copy" Width="60" Background="#333333" Foreground="White" BorderThickness="0"/>
+            <Button x:Name="ClearLogButton" Content="Clear" Width="60"/>
+            <Button x:Name="CopyLogButton" Content="Copy" Width="60"/>
         </StackPanel>
         
         <ScrollViewer Grid.Row="1" Margin="8,0,8,8">
@@ -58,13 +62,18 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
-            <TextBlock Text="Shader Controls" Foreground="White" VerticalAlignment="Center"/>
+        <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
+            <TextBlock Text="Controller" Foreground="White" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Shader:" Foreground="White" VerticalAlignment="Center"/>
+                <ComboBox x:Name="ShaderPicker" Width="200"/>
+            </StackPanel>
+            <TextBlock x:Name="ControllerStatusText" Text="Ready" Foreground="#888888" FontSize="12" VerticalAlignment="Center"/>
         </StackPanel>
         
         <ScrollViewer Grid.Row="1" Margin="8,0,8,8">
             <StackPanel Spacing="12">
-                <Button x:Name="LoadShaderButton" Content="Load Shader (Future)" Width="200" Background="#444444" Foreground="White" BorderThickness="1" BorderBrush="#666666"/>
+                <Button x:Name="LoadShaderButton" Content="Load Shader" Width="200"/>
                 
                 <StackPanel Spacing="4">
                     <TextBlock Text="Saturation" Foreground="White" FontSize="12"/>

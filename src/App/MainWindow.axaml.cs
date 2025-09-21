@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.Platform.Storage;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,7 +19,7 @@ public partial class MainWindow : Window {
 
         Loaded += (_, __) => {
             Directory.CreateDirectory(_shaderDir);
-            StatusText.Text = "Initializing shader system";
+            ControllerStatusText.Text = "Initializing shader system";
             LogMessage("Application started");
             LogMessage($"Shader directory: {_shaderDir}");
             Surface.SetLogCallback(LogMessage);
@@ -29,10 +30,10 @@ public partial class MainWindow : Window {
 
         ShaderPicker.SelectionChanged += (_, __) => {
             if (ShaderPicker.SelectedItem is string path && File.Exists(path)) {
-                StatusText.Text = $"Compiling {Path.GetFileName(path)}";
+                ControllerStatusText.Text = $"Compiling {Path.GetFileName(path)}";
                 LogMessage($"Loading shader: {Path.GetFileName(path)}");
                 Surface.LoadFragmentShaderFromFile(path, out var message);
-                StatusText.Text = message;
+                ControllerStatusText.Text = message;
             }
         };
 
@@ -67,8 +68,8 @@ public partial class MainWindow : Window {
             ToggleFullscreen();
         };
 
-        LoadShaderButton.Click += (_, __) => {
-            LogMessage("Load Shader button clicked - functionality not yet implemented");
+        LoadShaderButton.Click += async (_, __) => {
+            await LoadShaderFiles();
         };
 
         ClearLogButton.Click += (_, __) => {
@@ -104,9 +105,10 @@ public partial class MainWindow : Window {
         ShaderPicker.ItemsSource = items;
         if (items.Count > 0) {
             ShaderPicker.SelectedIndex = 0;
+            ControllerStatusText.Text = "Ready";
         }
         else {
-            StatusText.Text = $"Put some .glsl files in {_shaderDir}";
+            ControllerStatusText.Text = "No shaders found";
         }
     }
 
@@ -168,6 +170,101 @@ public partial class MainWindow : Window {
             Surface.Saturation = (float)value;
             SaturationValue.Text = value.ToString("F2");
             LogMessage($"Saturation changed to {value:F2}");
+        }
+    }
+
+    private async Task LoadShaderFiles()
+    {
+        try
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider is not { } storageProvider)
+            {
+                LogMessage("Unable to access file system - storage provider not available");
+                return;
+            }
+
+            // Configure file picker options
+            var filePickerOptions = new FilePickerOpenOptions
+            {
+                Title = "Select GLSL Shader Files",
+                AllowMultiple = true,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("GLSL Shader Files")
+                    {
+                        Patterns = new[] { "*.glsl", "*.frag", "*.vert", "*.comp" }
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = new[] { "*.*" }
+                    }
+                }
+            };
+
+            LogMessage("Opening file dialog to select shader files...");
+            var files = await storageProvider.OpenFilePickerAsync(filePickerOptions);
+
+            if (files.Count == 0)
+            {
+                LogMessage("No files selected");
+                return;
+            }
+
+            LogMessage($"Selected {files.Count} file(s) for import");
+
+            int successCount = 0;
+            int errorCount = 0;
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var fileName = file.Name;
+                    var destinationPath = Path.Combine(_shaderDir, fileName);
+
+                    // Check if file already exists
+                    if (File.Exists(destinationPath))
+                    {
+                        LogMessage($"File '{fileName}' already exists in shaders folder - skipping");
+                        continue;
+                    }
+
+                    // Copy the file to the shaders directory
+                    using var sourceStream = await file.OpenReadAsync();
+                    using var destinationStream = File.Create(destinationPath);
+                    await sourceStream.CopyToAsync(destinationStream);
+
+                    LogMessage($"Successfully imported: {fileName}");
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Error importing '{file.Name}': {ex.Message}");
+                    errorCount++;
+                }
+            }
+
+            // Refresh the shader picker if any files were successfully imported
+            if (successCount > 0)
+            {
+                LogMessage($"Import complete: {successCount} files imported, {errorCount} errors");
+                PopulatePicker();
+                
+                // Auto-select the first newly imported shader
+                if (ShaderPicker.ItemsSource is IEnumerable<string> items && items.Any())
+                {
+                    ShaderPicker.SelectedIndex = 0;
+                }
+            }
+            else
+            {
+                LogMessage($"Import failed: {errorCount} errors, no files imported");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Error during file import: {ex.Message}");
         }
     }
 }

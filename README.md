@@ -4,7 +4,6 @@ This repository contains a template for a .NET GLSL application built with [Aval
 
 ![Avalonia Video Synth](media/20250918.png)
 
-### 
 ```powershell
 # Option 1: PowerShell Scripts (Recommended)
 # First time setup
@@ -32,3 +31,9 @@ dotnet run --project src/App/AvaloniaVideoSynth.csproj
 
 (A) : Auto-referenced package.
 ```
+### Roadmap
+
+- Divide the Log window to edit the current shader  
+- Top bar add panel for performance mode  
+- Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel  
+
