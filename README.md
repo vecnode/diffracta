@@ -1,4 +1,4 @@
-# dotnet-shader-app
+# Diffracta (v/0.1)
 
 This repository contains a template for Diffracta, a .NET GLSL application built with [Avalonia UI](https://avaloniaui.net/). The purpose is to build a live video editor for performance and (perhaps) neural rendering.
 
