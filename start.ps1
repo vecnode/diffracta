@@ -1,4 +1,4 @@
-# Avalonia Video Synth Application Launcher
+# Diffracta Application Launcher
 # Single script that handles everything with proper privileges
 
 $ErrorActionPreference = 'Stop'
@@ -9,14 +9,14 @@ if ($IsWindows -or $env:OS -eq "Windows_NT") {
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 }
 
-Write-Host "=== Avalonia Video Synth (GLSL) ===" -ForegroundColor Green
+Write-Host "=== Diffracta ===" -ForegroundColor Green
 
 # Function to cleanup on exit
 function Cleanup {
     Write-Host "Cleaning up processes" -ForegroundColor Yellow
     # Kill any lingering dotnet processes for this project
     Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -like "*AvaloniaVideoSynth*"
+        $_.CommandLine -like "*Diffracta*"
     } | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
@@ -33,7 +33,7 @@ try {
 }
 
 # Check if project exists
-if (-not (Test-Path "src/App/AvaloniaVideoSynth.csproj")) {
+if (-not (Test-Path "src/App/Diffracta.csproj")) {
     Write-Host "Error: Project file not found. Please run this script from the project root directory." -ForegroundColor Red
     exit 1
 }
@@ -48,14 +48,14 @@ try {
 
     # Restore packages to local cache first
     Write-Host "Restoring packages to local cache" -ForegroundColor Yellow
-    dotnet restore src/App/AvaloniaVideoSynth.csproj --packages ./cache
+    dotnet restore src/App/Diffracta.csproj --packages ./cache
 
     Write-Host "Building project" -ForegroundColor Yellow
-    dotnet build src/App/AvaloniaVideoSynth.csproj
+    dotnet build src/App/Diffracta.csproj
     
     # Run the application
     Write-Host "Launching application" -ForegroundColor Yellow
-    dotnet run --project src/App/AvaloniaVideoSynth.csproj
+    dotnet run --project src/App/Diffracta.csproj
 }
 catch {
     Write-Host "Error running application: $($_.Exception.Message)" -ForegroundColor Red

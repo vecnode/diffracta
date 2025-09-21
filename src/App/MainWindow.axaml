@@ -4,7 +4,7 @@
         xmlns:local="using:AvaloniaVideoSynth"
         xmlns:gfx="using:AvaloniaVideoSynth.Graphics"
         x:Class="AvaloniaVideoSynth.MainWindow"
-        Width="1000" Height="700" Title="Avalonia Video Synth (GLSL)">
+        Width="1000" Height="700" Title="Diffracta (v/0.1)">
   <Window.Styles>
     <Style Selector="TextBox#LogTextBox">
       <Setter Property="Background" Value="Transparent"/>

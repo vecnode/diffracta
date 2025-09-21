@@ -1,8 +1,8 @@
 # dotnet-shader-app
 
-This repository contains a template for a .NET GLSL application built with [Avalonia UI](https://avaloniaui.net/). The purpose is to build a live shader editing and real-time (perhaps neural) rendering. 
+This repository contains a template for Diffracta, a .NET GLSL application built with [Avalonia UI](https://avaloniaui.net/). The purpose is to build a live video editor for performance and (perhaps) neural rendering.
 
-![Avalonia Video Synth](media/20250918.png)
+![Diffracta](media/20250918.png)
 
 ```powershell
 # Option 1: PowerShell Scripts (Recommended)

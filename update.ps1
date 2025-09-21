@@ -1,7 +1,7 @@
-# Update and Setup Folder Script for Avalonia Video Synth Application
+# Update and Setup Folder Script for Diffracta Application
 # Uses local package cache in ./cache directory
 
-Write-Host "=== Avalonia Video Synth - Environment Setup ===" -ForegroundColor Green
+Write-Host "=== Diffracta - Environment Setup ===" -ForegroundColor Green
 
 # Create local cache directory if it doesn't exist
 if (-not (Test-Path "cache")) {
@@ -24,7 +24,7 @@ try {
 }
 
 # Check if we're in the correct directory
-if (-not (Test-Path "src/App/AvaloniaVideoSynth.csproj")) {
+if (-not (Test-Path "src/App/Diffracta.csproj")) {
     Write-Host "Please run this script from the project root directory" -ForegroundColor Red
     exit 1
 }
@@ -36,7 +36,7 @@ Write-Host "Restoring NuGet packages to local cache" -ForegroundColor Yellow
 try {
     # First, download packages to local cache
     Write-Host "Downloading packages to ./cache directory" -ForegroundColor Cyan
-    dotnet restore src/App/AvaloniaVideoSynth.csproj --packages ./cache
+    dotnet restore src/App/Diffracta.csproj --packages ./cache
     Write-Host "Packages restored to local cache successfully" -ForegroundColor Green
 } catch {
     Write-Host "Failed to restore packages: $($_.Exception.Message)" -ForegroundColor Red
@@ -46,7 +46,7 @@ try {
 # List installed packages
 Write-Host "`nInstalled packages:" -ForegroundColor Yellow
 try {
-    dotnet list src/App/AvaloniaVideoSynth.csproj package
+    dotnet list src/App/Diffracta.csproj package
 } catch {
     Write-Host "Could not list packages: $($_.Exception.Message)" -ForegroundColor Red
 }
@@ -63,7 +63,7 @@ $requiredPackages = @(
 $missingPackages = @()
 foreach ($package in $requiredPackages) {
     try {
-        $result = dotnet list src/App/AvaloniaVideoSynth.csproj package | Select-String $package
+        $result = dotnet list src/App/Diffracta.csproj package | Select-String $package
         if ($result) {
             Write-Host "$package" -ForegroundColor Green
         } else {
@@ -81,7 +81,7 @@ if ($missingPackages.Count -gt 0) {
     foreach ($package in $missingPackages) {
         try {
             Write-Host "Installing $package to local cache" -ForegroundColor Yellow
-            dotnet add src/App/AvaloniaVideoSynth.csproj package $package --packages ./cache
+            dotnet add src/App/Diffracta.csproj package $package --packages ./cache
             Write-Host "$package installed to local cache" -ForegroundColor Green
         } catch {
             Write-Host "Failed to install $package`: $($_.Exception.Message)" -ForegroundColor Red
@@ -92,7 +92,7 @@ if ($missingPackages.Count -gt 0) {
 # Build the project
 Write-Host "`nBuilding project" -ForegroundColor Yellow
 try {
-    dotnet build src/App/AvaloniaVideoSynth.csproj --configuration Release
+    dotnet build src/App/Diffracta.csproj --configuration Release
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Project built successfully" -ForegroundColor Green
     } else {
@@ -112,5 +112,5 @@ try {
 Write-Host "`n=== Environment Setup Complete ===" -ForegroundColor Green
 Write-Host "Packages are now stored locally in: ./cache" -ForegroundColor Cyan
 Write-Host "You can now run the application using: .\start.ps1" -ForegroundColor Cyan
-Write-Host "Or directly with: dotnet run --project src/App/AvaloniaVideoSynth.csproj" -ForegroundColor Cyan
+Write-Host "Or directly with: dotnet run --project src/App/Diffracta.csproj" -ForegroundColor Cyan
 
