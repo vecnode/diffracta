@@ -81,7 +81,7 @@ if ($missingPackages.Count -gt 0) {
     foreach ($package in $missingPackages) {
         try {
             Write-Host "Installing $package to local cache" -ForegroundColor Yellow
-            dotnet add src/App/Diffracta.csproj package $package --packages ./cache
+            dotnet add src/App/Diffracta.csproj package $package
             Write-Host "$package installed to local cache" -ForegroundColor Green
         } catch {
             Write-Host "Failed to install $package`: $($_.Exception.Message)" -ForegroundColor Red

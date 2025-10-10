@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-namespace AvaloniaVideoSynth;
+namespace Diffracta;
 
 public partial class App : Application {
     public override void Initialize() {

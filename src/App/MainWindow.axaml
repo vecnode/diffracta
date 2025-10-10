@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="using:AvaloniaVideoSynth"
-        xmlns:gfx="using:AvaloniaVideoSynth.Graphics"
-        x:Class="AvaloniaVideoSynth.MainWindow"
+        xmlns:local="using:Diffracta"
+        xmlns:gfx="using:Diffracta.Graphics"
+        x:Class="Diffracta.MainWindow"
         Width="1000" Height="700" Title="Diffracta (v/0.1)">
   <Window.Styles>
     <Style Selector="TextBox#LogTextBox">
@@ -27,14 +27,66 @@
     </Style>
   </Window.Styles>
   
-  <DockPanel Background="#1e1e1e">
-    <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top" Margin="8" Background="#1e1e1e">
-      <Button x:Name="ToggleLogButton" Content="Show Log" />
-      <Button x:Name="ToggleControllerButton" Content="Show Controller" Margin="8,0,0,0" />
-      <Button x:Name="FullscreenButton" Content="Fullscreen" Margin="8,0,0,0" />
+  <Grid Background="#1e1e1e">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    
+    <!-- Top toolbar -->
+    <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="0" Grid.ColumnSpan="2" Margin="8" Background="#1e1e1e">
+      <Button x:Name="FullscreenButton" Content="Maximize" />
+      <Button x:Name="PerformanceButton" Content="Performance" Margin="8,0,0,0" />
     </StackPanel>
     
-    <Grid DockPanel.Dock="Bottom" x:Name="LogPanel" Height="300" Background="#1e1e1e" IsVisible="False">
+    <!-- Top Left: Left Panel (Controls) -->
+    <Grid Grid.Row="1" Grid.Column="0" x:Name="ControlsPanel" Background="#2d2d2d">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
+            <TextBlock Text="Left Panel" Foreground="White" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Shader:" Foreground="White" VerticalAlignment="Center"/>
+                <ComboBox x:Name="ShaderPicker" Width="200"/>
+            </StackPanel>
+            <TextBlock x:Name="LeftPanelStatusText" Text="Ready" Foreground="#888888" FontSize="12" VerticalAlignment="Center"/>
+        </StackPanel>
+        
+        <ScrollViewer Grid.Row="1" Margin="8,0,8,8">
+            <StackPanel Spacing="12">
+                <Button x:Name="LoadShaderButton" Content="Load Shader" Width="200"/>
+                
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Saturation" Foreground="White" FontSize="12"/>
+                    <Slider x:Name="SaturationSlider" Minimum="0" Maximum="2" Value="1" Width="200" 
+                            Background="#333333" Foreground="White" 
+                            ValueChanged="OnSaturationChanged"/>
+                    <TextBlock x:Name="SaturationValue" Text="1.00" Foreground="#888888" FontSize="10" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+    
+    <!-- Vertical splitter between left and right columns -->
+    <GridSplitter Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Width="3" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
+    
+    <!-- Top Right: Shader Surface -->
+    <gfx:ShaderSurface x:Name="Surface" Grid.Row="1" Grid.Column="1" Margin="0" Focusable="True" ClipToBounds="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+    
+    <!-- Horizontal splitter between top and bottom rows -->
+    <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Height="3" Background="#555555" VerticalAlignment="Bottom" x:Name="HorizontalSplitter"/>
+    
+    <!-- Bottom Left: Debug Log -->
+    <Grid Grid.Row="2" Grid.Column="0" x:Name="LogPanel" Background="#1e1e1e">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -55,37 +107,13 @@
                            FontSize="12"/>
             </ScrollViewer>
     </Grid>
-
-    <Grid DockPanel.Dock="Left" x:Name="ControlsPanel" Width="300" Background="#2d2d2d" IsVisible="False">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
-            <TextBlock Text="Controller" Foreground="White" VerticalAlignment="Center"/>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Shader:" Foreground="White" VerticalAlignment="Center"/>
-                <ComboBox x:Name="ShaderPicker" Width="200"/>
-            </StackPanel>
-            <TextBlock x:Name="ControllerStatusText" Text="Ready" Foreground="#888888" FontSize="12" VerticalAlignment="Center"/>
-        </StackPanel>
-        
-        <ScrollViewer Grid.Row="1" Margin="8,0,8,8">
-            <StackPanel Spacing="12">
-                <Button x:Name="LoadShaderButton" Content="Load Shader" Width="200"/>
-                
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Saturation" Foreground="White" FontSize="12"/>
-                    <Slider x:Name="SaturationSlider" Minimum="0" Maximum="2" Value="1" Width="200" 
-                            Background="#333333" Foreground="White" 
-                            ValueChanged="OnSaturationChanged"/>
-                    <TextBlock x:Name="SaturationValue" Text="1.00" Foreground="#888888" FontSize="10" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
+    
+    <!-- Vertical splitter between bottom left and bottom right -->
+    <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" Background="#555555" HorizontalAlignment="Right" x:Name="BottomVerticalSplitter"/>
+    
+    <!-- Bottom Right: Empty Panel -->
+    <Grid Grid.Row="2" Grid.Column="1" x:Name="BottomRightPanel" Background="#2d2d2d">
+        <TextBlock Text="Bottom Right Panel" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
     </Grid>
-
-    <gfx:ShaderSurface x:Name="Surface" Margin="0" Focusable="True"/>
-  </DockPanel>
+  </Grid>
 </Window>

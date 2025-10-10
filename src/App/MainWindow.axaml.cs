@@ -6,20 +6,21 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace AvaloniaVideoSynth;
+namespace Diffracta;
 
 public partial class MainWindow : Window {
     private FileSystemWatcher? _watcher;
     private string _shaderDir = Path.Combine(AppContext.BaseDirectory, "Shaders");
     private readonly StringBuilder _logBuffer = new();
     private bool _isFullscreen = false;
+    private bool _isPerformanceMode = false;
 
     public MainWindow() {
         InitializeComponent();
 
         Loaded += (_, __) => {
             Directory.CreateDirectory(_shaderDir);
-            ControllerStatusText.Text = "Initializing shader system";
+            LeftPanelStatusText.Text = "Initializing shader system";
             LogMessage("Application started");
             LogMessage($"Shader directory: {_shaderDir}");
             Surface.SetLogCallback(LogMessage);
@@ -30,42 +31,19 @@ public partial class MainWindow : Window {
 
         ShaderPicker.SelectionChanged += (_, __) => {
             if (ShaderPicker.SelectedItem is string path && File.Exists(path)) {
-                ControllerStatusText.Text = $"Compiling {Path.GetFileName(path)}";
+                LeftPanelStatusText.Text = $"Compiling {Path.GetFileName(path)}";
                 LogMessage($"Loading shader: {Path.GetFileName(path)}");
                 Surface.LoadFragmentShaderFromFile(path, out var message);
-                ControllerStatusText.Text = message;
-            }
-        };
-
-
-        ToggleLogButton.Click += (_, __) => {
-            if (LogPanel.IsVisible)
-            {
-                LogPanel.IsVisible = false;
-                ToggleLogButton.Content = "Show Log";
-            }
-            else
-            {
-                LogPanel.IsVisible = true;
-                ToggleLogButton.Content = "Hide Log";
-            }
-        };
-
-        ToggleControllerButton.Click += (_, __) => {
-            if (ControlsPanel.IsVisible)
-            {
-                ControlsPanel.IsVisible = false;
-                ToggleControllerButton.Content = "Show Controller";
-            }
-            else
-            {
-                ControlsPanel.IsVisible = true;
-                ToggleControllerButton.Content = "Hide Controller";
+                LeftPanelStatusText.Text = message;
             }
         };
 
         FullscreenButton.Click += (_, __) => {
             ToggleFullscreen();
+        };
+
+        PerformanceButton.Click += (_, __) => {
+            TogglePerformanceMode();
         };
 
         LoadShaderButton.Click += async (_, __) => {
@@ -88,9 +66,13 @@ public partial class MainWindow : Window {
             }
         };
 
-        // Handle Escape key to exit fullscreen
+        // Handle Escape key to exit performance mode first, then fullscreen
         KeyDown += (_, e) => {
-            if (e.Key == Avalonia.Input.Key.Escape && _isFullscreen)
+            if (e.Key == Avalonia.Input.Key.Escape && _isPerformanceMode)
+            {
+                ExitPerformanceMode();
+            }
+            else if (e.Key == Avalonia.Input.Key.Escape && _isFullscreen)
             {
                 ExitFullscreen();
             }
@@ -105,10 +87,10 @@ public partial class MainWindow : Window {
         ShaderPicker.ItemsSource = items;
         if (items.Count > 0) {
             ShaderPicker.SelectedIndex = 0;
-            ControllerStatusText.Text = "Ready";
+            LeftPanelStatusText.Text = "Ready";
         }
         else {
-            ControllerStatusText.Text = "No shaders found";
+            LeftPanelStatusText.Text = "No shaders found";
         }
     }
 
@@ -142,25 +124,87 @@ public partial class MainWindow : Window {
         }
     }
 
+    private void TogglePerformanceMode() {
+        if (_isPerformanceMode) {
+            ExitPerformanceMode();
+        } else {
+            EnterPerformanceMode();
+        }
+    }
+
     private void EnterFullscreen() {
         _isFullscreen = true;
-        WindowState = WindowState.FullScreen;
-        FullscreenButton.Content = "Exit Fullscreen";
+        WindowState = WindowState.Maximized;
+        FullscreenButton.Content = "Restore";
         
-        // Hide all panels in fullscreen
-        ControlsPanel.IsVisible = false;
-        LogPanel.IsVisible = false;
-        ToggleControllerButton.Content = "Show Controller";
-        ToggleLogButton.Content = "Show Log";
-        
-        LogMessage("Entered fullscreen mode - Press Escape to exit");
+        LogMessage("Entered maximized mode - Press Escape to exit");
     }
 
     private void ExitFullscreen() {
         _isFullscreen = false;
         WindowState = WindowState.Normal;
-        FullscreenButton.Content = "Fullscreen";
-        LogMessage("Exited fullscreen mode");
+        FullscreenButton.Content = "Maximize";
+        
+        LogMessage("Exited maximized mode");
+    }
+
+    private void EnterPerformanceMode() {
+        _isPerformanceMode = true;
+        PerformanceButton.Content = "Exit Performance";
+        
+        // Exit fullscreen if active
+        if (_isFullscreen) {
+            ExitFullscreen();
+        }
+        
+        // Hide all UI panels but keep the shader surface visible
+        ControlsPanel.IsVisible = false;
+        LogPanel.IsVisible = false;
+        BottomRightPanel.IsVisible = false;
+        VerticalSplitter.IsVisible = false;
+        HorizontalSplitter.IsVisible = false;
+        BottomVerticalSplitter.IsVisible = false;
+        
+        // Go fullscreen for Performance mode to use full viewport
+        WindowState = WindowState.FullScreen;
+        
+        // Hide mouse cursor in performance mode
+        Cursor = Avalonia.Input.Cursor.Parse("None");
+        
+        // Make the shader surface span the entire viewport
+        Surface.SetValue(Grid.RowProperty, 0);
+        Surface.SetValue(Grid.ColumnProperty, 0);
+        Surface.SetValue(Grid.RowSpanProperty, 3);
+        Surface.SetValue(Grid.ColumnSpanProperty, 2);
+        
+        LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
+    }
+
+    private void ExitPerformanceMode() {
+        _isPerformanceMode = false;
+        PerformanceButton.Content = "Performance";
+        
+        // Exit fullscreen and return to windowed mode
+        WindowState = WindowState.Normal;
+        
+        // Restore mouse cursor
+        Cursor = Avalonia.Input.Cursor.Parse("Arrow");
+        
+        // Show all panels again
+        ControlsPanel.IsVisible = true;
+        LogPanel.IsVisible = true;
+        BottomRightPanel.IsVisible = true;
+        VerticalSplitter.IsVisible = true;
+        HorizontalSplitter.IsVisible = true;
+        BottomVerticalSplitter.IsVisible = true;
+        
+        // Restore normal layout (shader in top-right quadrant)
+        Surface.SetValue(Grid.RowProperty, 1);
+        Surface.SetValue(Grid.ColumnProperty, 1);
+        Surface.SetValue(Grid.RowSpanProperty, 1);
+        Surface.SetValue(Grid.ColumnSpanProperty, 1);
+        
+        LogMessage("Exited performance mode");
     }
 
     private void OnSaturationChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)

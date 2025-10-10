@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace AvaloniaVideoSynth;
+namespace Diffracta;
 
 internal static class Program {
     [STAThread]

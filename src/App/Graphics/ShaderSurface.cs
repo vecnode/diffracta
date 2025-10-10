@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace AvaloniaVideoSynth.Graphics;
+namespace Diffracta.Graphics;
 
 public sealed class ShaderSurface : OpenGlControlBase {
     private GLLoader? _gl;
@@ -25,6 +25,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private string? _loadedFragPath;
     private Action<string>? _logCallback;
     private float _saturation = 1.0f;
+    private int _lastWidth = 0;
+    private int _lastHeight = 0;
 
     public void SetLogCallback(Action<string> callback) {
         _logCallback = callback;
@@ -186,6 +188,20 @@ public sealed class ShaderSurface : OpenGlControlBase {
             int w = Math.Max(1, (int)(Bounds.Width * scale));
             int h = Math.Max(1, (int)(Bounds.Height * scale));
 
+            // Check if size changed and recreate framebuffer if needed
+            if (w != _lastWidth || h != _lastHeight) {
+                _lastWidth = w;
+                _lastHeight = h;
+                
+                // Recreate framebuffer with new size
+                if (_framebuffer != 0) {
+                    _gl.glDeleteFramebuffers(1, ref _framebuffer);
+                    _gl.glDeleteTextures(1, ref _texture);
+                    _framebuffer = 0;
+                    _texture = 0;
+                }
+            }
+
             // Check if we need post-processing (saturation != 1.0)
             bool needsPostProcessing = Math.Abs(_saturation - 1.0f) > 0.001f;
 
@@ -262,6 +278,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
             if (_postProgram != 0) _gl.glDeleteProgram(_postProgram);
             if (_texture != 0) _gl.glDeleteTextures(1, ref _texture);
             if (_framebuffer != 0) _gl.glDeleteFramebuffers(1, ref _framebuffer);
+            
+            // Reset size tracking
+            _lastWidth = 0;
+            _lastHeight = 0;
         }
     }
 

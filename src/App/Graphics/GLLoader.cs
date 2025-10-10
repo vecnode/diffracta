@@ -2,7 +2,7 @@ using Avalonia.OpenGL;
 using System;
 using System.Runtime.InteropServices;
 
-namespace AvaloniaVideoSynth.Graphics;
+namespace Diffracta.Graphics;
 
 internal sealed class GLLoader
 {

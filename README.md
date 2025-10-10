@@ -10,8 +10,9 @@ This repository contains a template for Diffracta, a .NET GLSL application built
 .\update.ps1
 .\start.ps1
 # Option 2: Direct .NET Commands
-dotnet restore src/App/AvaloniaVideoSynth.csproj
-dotnet run --project src/App/AvaloniaVideoSynth.csproj
+dotnet restore src/App/Diffracta.csproj
+dotnet build src/App/Diffracta.csproj
+dotnet run --project src/App/Diffracta.csproj
 ```
 
 ## Requirements
@@ -31,9 +32,16 @@ dotnet run --project src/App/AvaloniaVideoSynth.csproj
 
 (A) : Auto-referenced package.
 ```
+
+### Features
+
+- Allows to load *.glsl shaders    
+- Stacks shaders for post-processing  
+- Has a Performance Mode (fullscreen, hides mouse)  
+
 ### Roadmap
-
-- Divide the Log window to edit the current shader  
-- Top bar add panel for performance mode  
-- Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel  
-
+ 
+- Divide the Log window to edit the current shader    
+- Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel   
+- Check the slider design  
+  
