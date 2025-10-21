@@ -12,7 +12,6 @@ public partial class MainWindow : Window {
     private FileSystemWatcher? _watcher;
     private string _shaderDir = Path.Combine(AppContext.BaseDirectory, "Shaders");
     private readonly StringBuilder _logBuffer = new();
-    private bool _isFullscreen = false;
     private bool _isPerformanceMode = false;
 
     public MainWindow() {
@@ -26,6 +25,7 @@ public partial class MainWindow : Window {
             Surface.SetLogCallback(LogMessage);
             PopulatePicker();
             SetupWatcher();
+            UpdateTabContent();
             LogMessage("Ready - Select a shader from the dropdown");
         };
 
@@ -35,11 +35,8 @@ public partial class MainWindow : Window {
                 LogMessage($"Loading shader: {Path.GetFileName(path)}");
                 Surface.LoadFragmentShaderFromFile(path, out var message);
                 LeftPanelStatusText.Text = message;
+                UpdateTabContent();
             }
-        };
-
-        FullscreenButton.Click += (_, __) => {
-            ToggleFullscreen();
         };
 
         PerformanceButton.Click += (_, __) => {
@@ -53,6 +50,7 @@ public partial class MainWindow : Window {
         ClearLogButton.Click += (_, __) => {
             _logBuffer.Clear();
             LogTextBox.Text = string.Empty;
+            LogScrollViewer.ScrollToEnd();
         };
 
         CopyLogButton.Click += (_, __) => {
@@ -66,15 +64,11 @@ public partial class MainWindow : Window {
             }
         };
 
-        // Handle Escape key to exit performance mode first, then fullscreen
+        // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
             if (e.Key == Avalonia.Input.Key.Escape && _isPerformanceMode)
             {
                 ExitPerformanceMode();
-            }
-            else if (e.Key == Avalonia.Input.Key.Escape && _isFullscreen)
-            {
-                ExitFullscreen();
             }
         };
     }
@@ -113,15 +107,9 @@ public partial class MainWindow : Window {
         
         Dispatcher.UIThread.Post(() => {
             LogTextBox.Text = _logBuffer.ToString();
+            // Auto-scroll to bottom
+            LogScrollViewer.ScrollToEnd();
         });
-    }
-
-    private void ToggleFullscreen() {
-        if (_isFullscreen) {
-            ExitFullscreen();
-        } else {
-            EnterFullscreen();
-        }
     }
 
     private void TogglePerformanceMode() {
@@ -132,30 +120,9 @@ public partial class MainWindow : Window {
         }
     }
 
-    private void EnterFullscreen() {
-        _isFullscreen = true;
-        WindowState = WindowState.Maximized;
-        FullscreenButton.Content = "Restore";
-        
-        LogMessage("Entered maximized mode - Press Escape to exit");
-    }
-
-    private void ExitFullscreen() {
-        _isFullscreen = false;
-        WindowState = WindowState.Normal;
-        FullscreenButton.Content = "Maximize";
-        
-        LogMessage("Exited maximized mode");
-    }
-
     private void EnterPerformanceMode() {
         _isPerformanceMode = true;
         PerformanceButton.Content = "Exit Performance";
-        
-        // Exit fullscreen if active
-        if (_isFullscreen) {
-            ExitFullscreen();
-        }
         
         // Hide all UI panels but keep the shader surface visible
         ControlsPanel.IsVisible = false;
@@ -178,13 +145,14 @@ public partial class MainWindow : Window {
         Surface.SetValue(Grid.ColumnSpanProperty, 2);
         
         LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
+        UpdateTabContent();
     }
 
     private void ExitPerformanceMode() {
         _isPerformanceMode = false;
         PerformanceButton.Content = "Performance";
         
-        // Exit fullscreen and return to windowed mode
+        // Return to windowed mode
         WindowState = WindowState.Normal;
         
         // Restore mouse cursor
@@ -205,6 +173,7 @@ public partial class MainWindow : Window {
         Surface.SetValue(Grid.ColumnSpanProperty, 1);
         
         LogMessage("Exited performance mode");
+        UpdateTabContent();
     }
 
     private void OnSaturationChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -214,6 +183,22 @@ public partial class MainWindow : Window {
             Surface.Saturation = (float)value;
             SaturationValue.Text = value.ToString("F2");
             LogMessage($"Saturation changed to {value:F2}");
+            UpdateTabContent();
+        }
+    }
+
+    private void UpdateTabContent()
+    {
+        // Update Info tab
+        if (ShaderPicker.SelectedItem is string selectedShader)
+        {
+            var fileName = Path.GetFileName(selectedShader);
+            var fileInfo = new FileInfo(selectedShader);
+            ShaderInfoText.Text = $"Current: {fileName}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+        }
+        else
+        {
+            ShaderInfoText.Text = "No shader loaded";
         }
     }
 

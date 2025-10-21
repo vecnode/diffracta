@@ -12,6 +12,9 @@
         <AssemblyName>Diffracta</AssemblyName>
         <RootNamespace>Diffracta</RootNamespace>
         
+        <!-- Application Icon -->
+        <ApplicationIcon>../../icons/app-icon.ico</ApplicationIcon>
+        
         <!-- publish for multiple OSes -->
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
         
@@ -34,6 +37,16 @@
     <!-- ship shaders next to the exe -->
     <ItemGroup>
         <None Update="Shaders\*.glsl">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <!-- Include icon files -->
+    <ItemGroup>
+        <None Include="../../icons/app-icon.ico">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Include="../../icons/app-icon-*.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

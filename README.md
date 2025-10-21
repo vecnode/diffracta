@@ -1,6 +1,6 @@
-# Diffracta (v/0.1)
+# Diffracta
 
-This repository contains a template for Diffracta, a .NET GLSL application built with [Avalonia UI](https://avaloniaui.net/). The purpose is to build a live video editor for performance and (perhaps) neural rendering.
+This repository contains the code for Diffracta, a GLSL video application built with .NET and [Avalonia UI](https://avaloniaui.net/). The purpose is to build an open-source and professional solution for live video editing and cinema. (perhaps neural rendering too)
 
 ![Diffracta](media/20250921.png)
 
@@ -15,7 +15,7 @@ dotnet build src/App/Diffracta.csproj
 dotnet run --project src/App/Diffracta.csproj
 ```
 
-## Requirements
+### Requirements
 
 - .NET 8.0 SDK or later
 - OpenGL 3.3 compatible graphics driver
@@ -41,7 +41,7 @@ dotnet run --project src/App/Diffracta.csproj
 
 ### Roadmap
  
-- Divide the Log window to edit the current shader    
+- Divide the Log window to view the current shader    
 - Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel   
 - Check the slider design  
   
