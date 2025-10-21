@@ -2,7 +2,7 @@
 
 This repository contains the code for Diffracta, a GLSL video application built with .NET and [Avalonia UI](https://avaloniaui.net/). The purpose is to build an open-source and professional solution for live video editing and cinema. (perhaps neural rendering too)
 
-![Diffracta](media/20250921.png)
+![Diffracta](media/20251022.png)
 
 ```powershell
 # Option 1: PowerShell Scripts (Recommended)
