@@ -5,6 +5,23 @@
         xmlns:gfx="using:Diffracta.Graphics"
         x:Class="Diffracta.MainWindow"
         Width="1000" Height="700" Title="Diffracta (v/0.1)">
+  
+  <Window.Resources>
+    <!-- Custom Thumb Template for Square Thumb -->
+    <ControlTheme x:Key="SquareThumbTheme" TargetType="Thumb">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="Black"
+                  BorderBrush="#d3d3d3"
+                  BorderThickness="3"
+                  CornerRadius="0"
+                  Width="18"
+                  Height="18"/>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+  </Window.Resources>
+  
   <Window.Styles>
     <Style Selector="TextBox#LogTextBox">
       <Setter Property="Background" Value="Transparent"/>
@@ -13,11 +30,34 @@
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="Cursor" Value="Arrow"/>
     </Style>
-    
-    <!-- Simple Slider Style - just change color to green -->
-    <Style Selector="Slider#SaturationSlider">
-      <Setter Property="Foreground" Value="#00ff88"/>
+
+    <!-- Simple Horizontal Slider Style -->
+    <Style Selector="Slider:horizontal">
+      <Setter Property="MinWidth" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Background" Value="#333333" />
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      
+      
+
+      
+      <Style Selector="^ Track">
+        <Style Selector="^ RepeatButton Border">
+          <Setter Property="CornerRadius" Value="0"/>
+          <Setter Property="Height" Value="15"/>
+          <Setter Property="BorderBrush" Value="#000000" />
+          <Setter Property="BorderThickness" Value="2" />
+        </Style>
+      </Style>
+                      
+      <Style Selector="^ Thumb">
+        <Setter Property="Theme" Value="{StaticResource SquareThumbTheme}"/>
+      </Style>
     </Style>
+    
+
+
     
     <!-- Button styling - light grey background with black text -->
     <Style Selector="Button">
@@ -67,11 +107,18 @@
                             <Button x:Name="LoadShaderButton" Content="Load Shader" Width="200"/>
                             
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Saturation" Foreground="White" FontSize="12"/>
-                                <Slider x:Name="SaturationSlider" Minimum="0" Maximum="2" Value="1" Width="200" 
-                                        Background="#333333" Foreground="White" 
-                                        ValueChanged="OnSaturationChanged"/>
-                                <TextBlock x:Name="SaturationValue" Text="1.00" Foreground="#888888" FontSize="10" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Saturation" Foreground="White" FontSize="14"/>
+                                <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="38">
+                                    <StackPanel Orientation="Horizontal" Spacing="0" Background="#141414">
+                                        <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                            <Slider x:Name="SaturationSlider" Minimum="0" Maximum="2" Value="1" Width="200" 
+                                                    ValueChanged="OnSaturationChanged" Padding="0,-4,0,0"/>
+                                        </Border>
+                                        <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                            <TextBlock x:Name="SaturationValue" Text="1.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
