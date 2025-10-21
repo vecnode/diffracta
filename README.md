@@ -33,15 +33,12 @@ dotnet run --project src/App/Diffracta.csproj
 (A) : Auto-referenced package.
 ```
 
-### Features
-
-- Allows to load *.glsl shaders    
-- Stacks shaders for post-processing  
-- Has a Performance Mode (fullscreen, hides mouse)  
 
 ### Roadmap
- 
-- Divide the Log window to view the current shader    
+
+- Add the code in a safe lock-unlock way in one of the tabs in the bottom right panel
 - Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel   
-- Check the slider design  
-  
+- Add a starter image and the color generator as well
+- Fix the shader stacks to be high performance and controllable with the 10 post vfx  
+- Change the design of the top bars and their widgets too
+
