@@ -30,12 +30,15 @@ public partial class MainWindow : Window {
         };
 
         ShaderPicker.SelectionChanged += (_, __) => {
-            if (ShaderPicker.SelectedItem is string path && File.Exists(path)) {
-                LeftPanelStatusText.Text = $"Compiling {Path.GetFileName(path)}";
-                LogMessage($"Loading shader: {Path.GetFileName(path)}");
-                Surface.LoadFragmentShaderFromFile(path, out var message);
-                LeftPanelStatusText.Text = message;
-                UpdateTabContent();
+            if (ShaderPicker.SelectedItem is string filename) {
+                var fullPath = Path.Combine(_shaderDir, filename);
+                if (File.Exists(fullPath)) {
+                    LeftPanelStatusText.Text = $"Compiling {filename}";
+                    LogMessage($"Loading shader: {filename}");
+                    Surface.LoadFragmentShaderFromFile(fullPath, out var message);
+                    LeftPanelStatusText.Text = message;
+                    UpdateTabContent();
+                }
             }
         };
 
@@ -76,6 +79,7 @@ public partial class MainWindow : Window {
     private void PopulatePicker() {
         var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
             .OrderBy(p => Path.GetFileName(p))
+            .Select(p => Path.GetFileName(p))
             .ToList();
 
         ShaderPicker.ItemsSource = items;
@@ -192,9 +196,9 @@ public partial class MainWindow : Window {
         // Update Info tab
         if (ShaderPicker.SelectedItem is string selectedShader)
         {
-            var fileName = Path.GetFileName(selectedShader);
-            var fileInfo = new FileInfo(selectedShader);
-            ShaderInfoText.Text = $"Current: {fileName}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+            var fullPath = Path.Combine(_shaderDir, selectedShader);
+            var fileInfo = new FileInfo(fullPath);
+            ShaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
         }
         else
         {
