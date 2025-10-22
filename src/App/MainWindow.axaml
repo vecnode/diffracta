@@ -4,6 +4,7 @@
         xmlns:local="using:Diffracta"
         xmlns:gfx="using:Diffracta.Graphics"
         x:Class="Diffracta.MainWindow"
+        x:DataType="local:MainWindow"
         Width="1000" Height="700" Title="Diffracta (v/0.1)">
   
   <Window.Resources>
@@ -95,6 +96,40 @@
                     </Grid.RowDefinitions>
                     
                     <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
+                        <!-- Tempo Clock Controls -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="TempoButton" 
+                                    Content="{Binding TempoButtonText}" 
+                                    Width="100" 
+                                    PointerPressed="OnTempoButtonPressed"
+                                    Background="{Binding TempoButtonBackground}"
+                                    Foreground="Black"
+                                    BorderBrush="Black"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#e0e0e0"/>
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                            <Button x:Name="ResetButton" 
+                                    Content="Reset" 
+                                    Width="60" 
+                                    Click="OnResetButtonClicked"
+                                    Background="#d3d3d3"
+                                    Foreground="Black"
+                                    BorderBrush="Black"
+                                    BorderThickness="1"
+                                    CornerRadius="4"/>
+                            <TextBlock x:Name="TempoDisplay" 
+                                       Text="{Binding Tempo.TimeDisplay}" 
+                                       Foreground="White" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"
+                                       MinWidth="80"/>
+                        </StackPanel>
+                        
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="Selected Shader:" Foreground="White" VerticalAlignment="Center"/>
                             <ComboBox x:Name="ShaderPicker" Width="200">

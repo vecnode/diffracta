@@ -5,17 +5,29 @@ using Avalonia.Platform.Storage;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.ComponentModel;
 
 namespace Diffracta;
 
-public partial class MainWindow : Window {
+public partial class MainWindow : Window, INotifyPropertyChanged {
     private FileSystemWatcher? _watcher;
     private string _shaderDir = Path.Combine(AppContext.BaseDirectory, "Shaders");
     private readonly StringBuilder _logBuffer = new();
     private bool _isPerformanceMode = false;
+    private MainTempo _globalTempoNumber;
+    private DispatcherTimer? _tempoTimer;
+    private bool _isTempoRunning = false;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow() {
         InitializeComponent();
+        
+        // Initialize global tempo number
+        _globalTempoNumber = new MainTempo();
+        
+        // Set up data binding
+        DataContext = this;
 
         Loaded += (_, __) => {
             Directory.CreateDirectory(_shaderDir);
@@ -68,6 +80,8 @@ public partial class MainWindow : Window {
         };
 
         TouchpadButton.Click += OnTouchpadClicked;
+        TempoButton.PointerPressed += OnTempoButtonPressed;
+        ResetButton.Click += OnResetButtonClicked;
 
         // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
@@ -195,6 +209,64 @@ public partial class MainWindow : Window {
         Console.WriteLine("Touchpad button clicked!");
     }
 
+    private void OnTempoButtonPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        LogMessage($"Tempo button pressed - Current state: {(_isTempoRunning ? "Running" : "Stopped")}");
+        
+        if (_isTempoRunning)
+        {
+            StopTempo();
+        }
+        else
+        {
+            StartTempo();
+        }
+    }
+
+    private void OnResetButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        StopTempo();
+        _globalTempoNumber.Reset();
+        LogMessage("Tempo reset");
+    }
+
+    private void StartTempo()
+    {
+        _isTempoRunning = true;
+        _tempoTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _tempoTimer.Tick += (_, __) => _globalTempoNumber.Increment();
+        _tempoTimer.Start();
+        
+        // Notify UI of button state changes
+        OnPropertyChanged(nameof(TempoButtonText));
+        OnPropertyChanged(nameof(TempoButtonBackground));
+        
+        LogMessage("Tempo started");
+    }
+
+    private void StopTempo()
+    {
+        _isTempoRunning = false;
+        _tempoTimer?.Stop();
+        _tempoTimer = null;
+        
+        // Notify UI of button state changes
+        OnPropertyChanged(nameof(TempoButtonText));
+        OnPropertyChanged(nameof(TempoButtonBackground));
+        
+        LogMessage($"Tempo stopped - Total time: {_globalTempoNumber.TimeDisplay}");
+    }
+
+    // Properties for data binding
+    public MainTempo Tempo => _globalTempoNumber;
+    
+    public string TempoButtonText => _isTempoRunning ? "Stop Clock" : "Start Clock";
+    
+    public string TempoButtonBackground => _isTempoRunning ? "#ff8c00" : "#d3d3d3";
+
     private void UpdateTabContent()
     {
         // Update Info tab
@@ -303,6 +375,11 @@ public partial class MainWindow : Window {
         {
             LogMessage($"Error during file import: {ex.Message}");
         }
+    }
+
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
 
