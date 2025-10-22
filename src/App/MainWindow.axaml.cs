@@ -67,6 +67,8 @@ public partial class MainWindow : Window {
             }
         };
 
+        TouchpadButton.Click += OnTouchpadClicked;
+
         // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
             if (e.Key == Avalonia.Input.Key.Escape && _isPerformanceMode)
@@ -130,11 +132,9 @@ public partial class MainWindow : Window {
         
         // Hide all UI panels but keep the shader surface visible
         ControlsPanel.IsVisible = false;
-        LogPanel.IsVisible = false;
         BottomRightPanel.IsVisible = false;
         VerticalSplitter.IsVisible = false;
         HorizontalSplitter.IsVisible = false;
-        BottomVerticalSplitter.IsVisible = false;
         
         // Go fullscreen for Performance mode to use full viewport
         WindowState = WindowState.FullScreen;
@@ -164,11 +164,9 @@ public partial class MainWindow : Window {
         
         // Show all panels again
         ControlsPanel.IsVisible = true;
-        LogPanel.IsVisible = true;
         BottomRightPanel.IsVisible = true;
         VerticalSplitter.IsVisible = true;
         HorizontalSplitter.IsVisible = true;
-        BottomVerticalSplitter.IsVisible = true;
         
         // Restore normal layout (shader in top-right quadrant)
         Surface.SetValue(Grid.RowProperty, 1);
@@ -189,6 +187,12 @@ public partial class MainWindow : Window {
             LogMessage($"Saturation changed to {value:F2}");
             UpdateTabContent();
         }
+    }
+
+    private void OnTouchpadClicked(object? sender, RoutedEventArgs e)
+    {
+        LogMessage("Touchpad button clicked!");
+        Console.WriteLine("Touchpad button clicked!");
     }
 
     private void UpdateTabContent()

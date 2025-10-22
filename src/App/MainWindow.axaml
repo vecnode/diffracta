@@ -84,8 +84,8 @@
       <Button x:Name="PerformanceButton" Content="Performance" Margin="8,0,0,0" />
     </StackPanel>
     
-    <!-- Top Left: Left Panel (Controls) with Tabs -->
-    <Grid Grid.Row="1" Grid.Column="0" x:Name="ControlsPanel" Background="#2d2d2d">
+    <!-- Left Panel (Controls) with Tabs - Full Height -->
+    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" x:Name="ControlsPanel" Background="#2d2d2d">
         <TabControl Background="#2d2d2d" Foreground="White">
             <TabItem Header="Controls" Background="#2d2d2d" FontSize="14" Foreground="White">
                 <Grid>
@@ -96,7 +96,7 @@
                     
                     <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="Shader:" Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock Text="Selected Shader:" Foreground="White" VerticalAlignment="Center"/>
                             <ComboBox x:Name="ShaderPicker" Width="200">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
@@ -126,10 +126,35 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                            
+                            <!-- Custom Touchpad Button -->
+                            <StackPanel Spacing="4">
+                                <Button x:Name="TouchpadButton" 
+                                        Width="200" 
+                                        Height="40" 
+                                        Click="OnTouchpadClicked"
+                                        Background="#d3d3d3"
+                                        CornerRadius="4"
+                                        Content="">
+
+                                    <TextBlock Text="Touchpad" Foreground="Black" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    <Button.Styles>
+                                    
+                                        <Style Selector="Button:pointerover">
+                                            <Setter Property="Background" Value="#e0e0e0"/>
+                                        </Style>
+                                        <Style Selector="Button:pressed">
+                                            <Setter Property="Background" Value="#ff8c00"/>
+                                        </Style>
+                                    </Button.Styles>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </TabItem>
+
+            
             
             <TabItem Header="Tools" Background="#2d2d2d" FontSize="14" Foreground="White">
               <TextBlock Text="hola" Foreground="White" FontSize="12"/>
@@ -143,38 +168,37 @@
     <!-- Top Right: Shader Surface -->
     <gfx:ShaderSurface x:Name="Surface" Grid.Row="1" Grid.Column="1" Margin="0" Focusable="True" ClipToBounds="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     
-    <!-- Horizontal splitter between top and bottom rows -->
-    <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Height="3" Background="#555555" VerticalAlignment="Bottom" x:Name="HorizontalSplitter"/>
+    <!-- Horizontal splitter between top and bottom rows (right side only) -->
+    <GridSplitter Grid.Row="1" Grid.Column="1" Height="3" Background="#555555" VerticalAlignment="Bottom" x:Name="HorizontalSplitter"/>
     
-    <!-- Bottom Left: Debug Log -->
-    <Grid Grid.Row="2" Grid.Column="0" x:Name="LogPanel" Background="#1e1e1e">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
-            <TextBlock Text="Debug Log" Foreground="White" VerticalAlignment="Center"/>
-            <Button x:Name="ClearLogButton" Content="Clear" Width="60"/>
-            <Button x:Name="CopyLogButton" Content="Copy" Width="60"/>
-        </StackPanel>
-        
-        <ScrollViewer Grid.Row="1" Margin="8,0,8,8" x:Name="LogScrollViewer">
-                <TextBlock x:Name="LogTextBox" 
-                           Background="Transparent" 
-                           Foreground="White" 
-                           TextWrapping="Wrap"
-                           FontFamily="Consolas"
-                           FontSize="12"/>
-            </ScrollViewer>
-    </Grid>
-    
-    <!-- Vertical splitter between bottom left and bottom right -->
-    <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" Background="#555555" HorizontalAlignment="Right" x:Name="BottomVerticalSplitter"/>
     
     <!-- Bottom Right: Tabbed Panel -->
     <Grid Grid.Row="2" Grid.Column="1" x:Name="BottomRightPanel" Background="#2d2d2d">
         <TabControl Background="#2d2d2d" Foreground="White">
+            <TabItem Header="Log" Background="#2d2d2d" FontSize="14" Foreground="White">
+                <Grid Background="#1e1e1e">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
+                        <TextBlock Text="Debug Log" Foreground="White" VerticalAlignment="Center"/>
+                        <Button x:Name="ClearLogButton" Content="Clear" Width="60"/>
+                        <Button x:Name="CopyLogButton" Content="Copy" Width="60"/>
+                    </StackPanel>
+                    
+                    <ScrollViewer Grid.Row="1" Margin="8,0,8,8" x:Name="LogScrollViewer">
+                        <TextBlock x:Name="LogTextBox" 
+                                   Background="Transparent" 
+                                   Foreground="White" 
+                                   TextWrapping="Wrap"
+                                   FontFamily="Consolas"
+                                   FontSize="12"/>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+            
             <TabItem Header="Info" Background="#2d2d2d" FontSize="14" Foreground="White">
                 <ScrollViewer Margin="8">
                     <StackPanel Spacing="8">
