@@ -287,7 +287,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
 
     public void LoadFragmentShaderFromFile(string path, out string message) {
         _currentFragPath = path;
-        message = $"Running: {Path.GetFileName(path)}";
+        message = "Shader path set successfully";
     }
 
     private void CacheUniforms() {

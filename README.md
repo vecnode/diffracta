@@ -36,6 +36,7 @@ dotnet run --project src/App/Diffracta.csproj
 
 ### Roadmap
 
+- Add images as starting point
 - Add the code in a safe lock-unlock way in one of the tabs in the bottom right panel
 - Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel   
 - Add a starter image and the color generator as well

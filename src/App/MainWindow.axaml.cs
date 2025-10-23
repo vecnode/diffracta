@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using Avalonia.Controls.Templates;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,8 +19,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private MainTempo _globalTempoNumber;
     private DispatcherTimer? _tempoTimer;
     private bool _isTempoRunning = false;
+    
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public new event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow() {
         InitializeComponent();
@@ -31,7 +34,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
         Loaded += (_, __) => {
             Directory.CreateDirectory(_shaderDir);
-            LeftPanelStatusText.Text = "Initializing shader system";
             LogMessage("Application started");
             LogMessage($"Shader directory: {_shaderDir}");
             Surface.SetLogCallback(LogMessage);
@@ -45,10 +47,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             if (ShaderPicker.SelectedItem is string filename) {
                 var fullPath = Path.Combine(_shaderDir, filename);
                 if (File.Exists(fullPath)) {
-                    LeftPanelStatusText.Text = $"Compiling {filename}";
-                    LogMessage($"Loading shader: {filename}");
                     Surface.LoadFragmentShaderFromFile(fullPath, out var message);
-                    LeftPanelStatusText.Text = message;
                     UpdateTabContent();
                 }
             }
@@ -80,8 +79,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
 
         TouchpadButton.Click += OnTouchpadClicked;
-        TempoButton.PointerPressed += OnTempoButtonPressed;
         ResetButton.Click += OnResetButtonClicked;
+
+        // Page navigation event handlers
+        Page1Button.Click += (_, __) => SwitchToPage(1);
+        Page2Button.Click += (_, __) => SwitchToPage(2);
+        Page3Button.Click += (_, __) => SwitchToPage(3);
+        Page4Button.Click += (_, __) => SwitchToPage(4);
 
         // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
@@ -101,10 +105,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         ShaderPicker.ItemsSource = items;
         if (items.Count > 0) {
             ShaderPicker.SelectedIndex = 0;
-            LeftPanelStatusText.Text = "Ready";
-        }
-        else {
-            LeftPanelStatusText.Text = "No shaders found";
         }
     }
 
@@ -160,7 +160,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Surface.SetValue(Grid.RowProperty, 0);
         Surface.SetValue(Grid.ColumnProperty, 0);
         Surface.SetValue(Grid.RowSpanProperty, 3);
-        Surface.SetValue(Grid.ColumnSpanProperty, 2);
+        Surface.SetValue(Grid.ColumnSpanProperty, 3);
         
         LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
         UpdateTabContent();
@@ -184,7 +184,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         
         // Restore normal layout (shader in top-right quadrant)
         Surface.SetValue(Grid.RowProperty, 1);
-        Surface.SetValue(Grid.ColumnProperty, 1);
+        Surface.SetValue(Grid.ColumnProperty, 2);
         Surface.SetValue(Grid.RowSpanProperty, 1);
         Surface.SetValue(Grid.ColumnSpanProperty, 1);
         
@@ -209,8 +209,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Console.WriteLine("Touchpad button clicked!");
     }
 
-    private void OnTempoButtonPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    private void OnTempoButtonPressed(object? sender, RoutedEventArgs e)
     {
+        LogMessage("=== TEMPO BUTTON CLICKED ===");
         LogMessage($"Tempo button pressed - Current state: {(_isTempoRunning ? "Running" : "Stopped")}");
         
         if (_isTempoRunning)
@@ -237,7 +238,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             Interval = TimeSpan.FromSeconds(1)
         };
-        _tempoTimer.Tick += (_, __) => _globalTempoNumber.Increment();
+        _tempoTimer.Tick += (_, __) => {
+            _globalTempoNumber.Increment();
+            LogMessage($"Global Tempo: {_globalTempoNumber.TimeDisplay} (Seconds: {_globalTempoNumber.Seconds})");
+        };
         _tempoTimer.Start();
         
         // Notify UI of button state changes
@@ -381,6 +385,239 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    // Page navigation method
+    private void SwitchToPage(int pageNumber)
+    {
+        switch (pageNumber)
+        {
+            case 1:
+                // Controls page is already the default content
+                PageContentControl.Content = ControlsPage;
+                LogMessage("Switched to Controls page");
+                break;
+            case 2:
+                PageContentControl.Content = CreateToolsPage();
+                LogMessage("Switched to Tools page");
+                break;
+            case 3:
+                PageContentControl.Content = CreateSettingsPage();
+                LogMessage("Switched to Settings page");
+                break;
+            case 4:
+                PageContentControl.Content = CreateHelpPage();
+                LogMessage("Switched to Help page");
+                break;
+        }
+    }
+
+    private Avalonia.Controls.Control CreateToolsPage()
+    {
+        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
+        var stackPanel = new StackPanel { Spacing = 12 };
+        
+        stackPanel.Children.Add(new TextBlock 
+        { 
+            Text = "Tools", 
+            Foreground = Avalonia.Media.Brushes.White, 
+            FontSize = 14, 
+        });
+
+      
+        var toolsStack = new StackPanel { Spacing = 8 };
+        toolsStack.Children.Add(new Button { Content = "Pad 1", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        toolsStack.Children.Add(new Button { Content = "Pad 2", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        toolsStack.Children.Add(new Button { Content = "Pad 3", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        
+        stackPanel.Children.Add(toolsStack);
+        
+        // Directory Selection Section
+        var directorySection = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(0, 16, 0, 0) };
+        
+        // Browse button only
+        var browseButton = new Button 
+        { 
+            Content = "Browse Directory", 
+            Width = 150, 
+            Height = 30,
+            Background = Avalonia.Media.Brushes.DarkGray,
+            Foreground = Avalonia.Media.Brushes.White,
+            BorderThickness = new Avalonia.Thickness(0),
+            CornerRadius = new Avalonia.CornerRadius(4),
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+        
+        // Directory listing
+        var directoryListBox = new ListBox 
+        { 
+            Width = double.NaN, // Full width
+            Height = 200,
+            Background = Avalonia.Media.Brushes.DarkGray,
+            Foreground = Avalonia.Media.Brushes.White,
+            BorderBrush = Avalonia.Media.Brushes.Gray,
+            BorderThickness = new Avalonia.Thickness(1),
+            CornerRadius = new Avalonia.CornerRadius(4),
+            Margin = new Avalonia.Thickness(0, 8, 0, 0)
+        };
+        
+        // Add click handler for browse button (after ListBox is declared)
+        browseButton.Click += async (_, __) => await BrowseDirectory(directoryListBox);
+        
+        // No sample items - ready for actual directory contents
+        
+        directorySection.Children.Add(browseButton);
+        directorySection.Children.Add(directoryListBox);
+        
+        stackPanel.Children.Add(directorySection);
+        scrollViewer.Content = stackPanel;
+        
+        return scrollViewer;
+    }
+
+    private async Task BrowseDirectory(ListBox directoryListBox)
+    {
+        try
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider is not { } storageProvider)
+            {
+                LogMessage("Unable to access file system - storage provider not available");
+                return;
+            }
+
+            // Configure folder picker options
+            var folderPickerOptions = new FolderPickerOpenOptions
+            {
+                Title = "Select Directory",
+                AllowMultiple = false
+            };
+
+            LogMessage("Opening folder dialog...");
+            var folders = await storageProvider.OpenFolderPickerAsync(folderPickerOptions);
+
+            if (folders.Count > 0)
+            {
+                var selectedFolder = folders[0];
+                var folderPath = selectedFolder.Path.LocalPath;
+                
+                // Load directory contents
+                LoadDirectoryContents(folderPath, directoryListBox);
+                
+                LogMessage($"Selected directory: {folderPath}");
+            }
+            else
+            {
+                LogMessage("No directory selected");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Error browsing directory: {ex.Message}");
+        }
+    }
+
+    private void LoadDirectoryContents(string directoryPath, ListBox directoryListBox)
+    {
+        try
+        {
+            // Clear existing items
+            directoryListBox.Items.Clear();
+            
+            if (!Directory.Exists(directoryPath))
+            {
+                LogMessage($"Directory does not exist: {directoryPath}");
+                return;
+            }
+
+            // Get directories first
+            var directories = Directory.GetDirectories(directoryPath)
+                .Select(Path.GetFileName)
+                .OrderBy(name => name)
+                .Select(name => $"📁 {name}")
+                .ToList();
+
+            // Get files
+            var files = Directory.GetFiles(directoryPath)
+                .Select(Path.GetFileName)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .OrderBy(name => name)
+                .Select(name => GetFileIcon(name) + " " + name)
+                .ToList();
+
+            // Add directories first, then files
+            foreach (var dir in directories)
+            {
+                directoryListBox.Items.Add(dir);
+            }
+            
+            foreach (var file in files)
+            {
+                directoryListBox.Items.Add(file);
+            }
+
+            LogMessage($"Loaded {directories.Count} directories and {files.Count} files");
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Error loading directory contents: {ex.Message}");
+        }
+    }
+
+    private string GetFileIcon(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return "📄";
+            
+        var extension = Path.GetExtension(fileName).ToLower();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => "🖼️",
+            ".mp4" or ".avi" or ".mov" or ".mkv" or ".wmv" => "🎥",
+            ".mp3" or ".wav" or ".flac" or ".aac" => "🎵",
+            ".pdf" => "📄",
+            ".doc" or ".docx" => "📝",
+            ".txt" => "📄",
+            ".zip" or ".rar" or ".7z" => "📦",
+            ".exe" => "⚙️",
+            _ => "📄"
+        };
+    }
+
+    private Avalonia.Controls.Control CreateSettingsPage()
+    {
+        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
+        var stackPanel = new StackPanel { Spacing = 12 };
+        
+        stackPanel.Children.Add(new TextBlock 
+        { 
+            Text = "Settings", 
+            Foreground = Avalonia.Media.Brushes.White, 
+            FontSize = 14, 
+        });
+        scrollViewer.Content = stackPanel;
+        
+        return scrollViewer;
+    }
+
+    private Avalonia.Controls.Control CreateHelpPage()
+    {
+        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
+        var stackPanel = new StackPanel { Spacing = 12 };
+        
+        stackPanel.Children.Add(new TextBlock 
+        { 
+            Text = "Help & Documentation", 
+            Foreground = Avalonia.Media.Brushes.White, 
+            FontSize = 14, 
+        });
+        
+      
+        scrollViewer.Content = stackPanel;
+        
+        return scrollViewer;
+    }
+
 }
 
 
