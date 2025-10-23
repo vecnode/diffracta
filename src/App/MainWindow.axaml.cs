@@ -197,8 +197,60 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (Surface != null && e.NewValue is double value)
         {
             Surface.Saturation = (float)value;
-            SaturationValue.Text = value.ToString("F2");
-            LogMessage($"Saturation changed to {value:F2}");
+            Slot1Value.Text = value.ToString("F2");
+            UpdateTabContent();
+        }
+    }
+
+    private void OnPingPongChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (Surface != null && e.NewValue is double value)
+        {
+            Surface.PingPongDelay = (float)value;
+            Slot2Value.Text = value.ToString("F2");
+            UpdateTabContent();
+        }
+    }
+
+    private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
+    private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
+    private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
+    private void OnSlot4ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(3, sender, e);
+    private void OnSlot5ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(4, sender, e);
+
+    private void OnSlot1ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(0, sender, e);
+    private void OnSlot2ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(1, sender, e);
+    private void OnSlot3ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(2, sender, e);
+    private void OnSlot4ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(3, sender, e);
+    private void OnSlot5ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(4, sender, e);
+
+    private void OnSlotToggleClicked(int slot, object? sender, RoutedEventArgs e)
+    {
+        if (Surface != null)
+        {
+            bool newState = !Surface.GetSlotActive(slot);
+            Surface.SetSlotActive(slot, newState);
+            LogMessage($"Slot {slot + 1} shader {(newState ? "activated" : "deactivated")}");
+            
+            // Update button appearance
+            var button = sender as Button;
+            if (button != null)
+            {
+                button.Content = newState ? "ON" : "OFF";
+                button.Background = newState ? 
+                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
+            }
+            
+            UpdateTabContent();
+        }
+    }
+
+    private void OnSlotValueChanged(int slot, object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (Surface != null && e.NewValue is double value)
+        {
+            Surface.SetSlotValue(slot, (float)value);
+            LogMessage($"Slot {slot + 1} value changed to {value:F2}");
             UpdateTabContent();
         }
     }
@@ -542,7 +594,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 .Select(Path.GetFileName)
                 .Where(name => !string.IsNullOrEmpty(name))
                 .OrderBy(name => name)
-                .Select(name => GetFileIcon(name) + " " + name)
+                .Select(name => GetFileIcon(name ?? "") + " " + name)
                 .ToList();
 
             // Add directories first, then files

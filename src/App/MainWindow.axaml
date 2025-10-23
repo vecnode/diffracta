@@ -221,16 +221,147 @@
                         <Button x:Name="LoadShaderButton" Content="Load Shader" Width="200"/>
                         
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Saturation" Foreground="White" FontSize="14"/>
-                            <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="38">
-                                <StackPanel Orientation="Horizontal" Spacing="0" Background="#141414">
-                                    <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                        <Slider x:Name="SaturationSlider" Minimum="0" Maximum="2" Value="1" Width="200" 
-                                                ValueChanged="OnSaturationChanged" Padding="0,-4,0,0"/>
+                            <TextBlock Text="Post-Process VFX" Foreground="White" FontSize="14"/>
+                            
+                            <!-- POST-PROCESS VFX CONTROL GROUP -->
+                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                <StackPanel Spacing="4">
+                                    
+                                    <!-- SLOT 1: Saturation -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Slot 1: Saturation" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+                                        <Button x:Name="Slot1Toggle" 
+                                                Content="ON" 
+                                                Width="40" 
+                                                Height="24"
+                                                Click="OnSlot1ToggleClicked"
+                                                Background="#4CAF50"
+                                                Foreground="White"
+                                                FontSize="10"
+                                                BorderBrush="Black"
+                                                BorderThickness="1"
+                                                CornerRadius="2"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <Slider x:Name="Slot1Slider" Minimum="0" Maximum="2" Value="1" Width="200" 
+                                                        ValueChanged="OnSlot1ValueChanged" Padding="0,-4,0,0"/>
+                                            </Border>
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <TextBlock x:Name="Slot1Value" Text="1.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                            </Border>
+                                        </StackPanel>
                                     </Border>
-                                    <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                        <TextBlock x:Name="SaturationValue" Text="1.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+
+                                    <!-- SLOT 2: Ping-Pong Delay -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Slot 2: Ping-Pong Delay" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+                                        <Button x:Name="Slot2Toggle" 
+                                                Content="OFF" 
+                                                Width="40" 
+                                                Height="24"
+                                                Click="OnSlot2ToggleClicked"
+                                                Background="#F44336"
+                                                Foreground="White"
+                                                FontSize="10"
+                                                BorderBrush="Black"
+                                                BorderThickness="1"
+                                                CornerRadius="2"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <Slider x:Name="Slot2Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                        ValueChanged="OnSlot2ValueChanged" Padding="0,-4,0,0"/>
+                                            </Border>
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <TextBlock x:Name="Slot2Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                            </Border>
+                                        </StackPanel>
                                     </Border>
+
+                                    <!-- SLOT 3: Empty -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Slot 3: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
+                                        <Button x:Name="Slot3Toggle" 
+                                                Content="OFF" 
+                                                Width="40" 
+                                                Height="24"
+                                                Click="OnSlot3ToggleClicked"
+                                                Background="#F44336"
+                                                Foreground="White"
+                                                FontSize="10"
+                                                BorderBrush="Black"
+                                                BorderThickness="1"
+                                                CornerRadius="2"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <Slider x:Name="Slot3Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                        ValueChanged="OnSlot3ValueChanged" Padding="0,-4,0,0"/>
+                                            </Border>
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <TextBlock x:Name="Slot3Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- SLOT 4: Empty -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Slot 4: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
+                                        <Button x:Name="Slot4Toggle" 
+                                                Content="OFF" 
+                                                Width="40" 
+                                                Height="24"
+                                                Click="OnSlot4ToggleClicked"
+                                                Background="#F44336"
+                                                Foreground="White"
+                                                FontSize="10"
+                                                BorderBrush="Black"
+                                                BorderThickness="1"
+                                                CornerRadius="2"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <Slider x:Name="Slot4Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                        ValueChanged="OnSlot4ValueChanged" Padding="0,-4,0,0"/>
+                                            </Border>
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <TextBlock x:Name="Slot4Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- SLOT 5: Empty -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Slot 5: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
+                                        <Button x:Name="Slot5Toggle" 
+                                                Content="OFF" 
+                                                Width="40" 
+                                                Height="24"
+                                                Click="OnSlot5ToggleClicked"
+                                                Background="#F44336"
+                                                Foreground="White"
+                                                FontSize="10"
+                                                BorderBrush="Black"
+                                                BorderThickness="1"
+                                                CornerRadius="2"/>
+                                    </StackPanel>
+                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <Slider x:Name="Slot5Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                        ValueChanged="OnSlot5ValueChanged" Padding="0,-4,0,0"/>
+                                            </Border>
+                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                                                <TextBlock x:Name="Slot5Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
                                 </StackPanel>
                             </Border>
                         </StackPanel>

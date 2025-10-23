@@ -12,19 +12,25 @@ namespace Diffracta.Graphics;
 public sealed class ShaderSurface : OpenGlControlBase {
     private GLLoader? _gl;
     private uint _program = 0;
-    private uint _postProgram = 0;
+    private uint[] _postProcessPrograms = new uint[5]; // 5 slots for post-processing
+    private bool[] _postProcessActive = new bool[5];   // Which slots are active
+    private float[] _postProcessValues = new float[5]; // Values for each slot
+    private uint _passthroughProgram = 0; // For final render
     private uint _vao = 0;
     private uint _vbo = 0;
     private uint _framebuffer = 0;
     private uint _texture = 0;
+    private uint _pingPongTexture1 = 0;
+    private uint _pingPongTexture2 = 0;
+    private uint _pingPongFramebuffer1 = 0;
+    private uint _pingPongFramebuffer2 = 0;
+    private bool _pingPongToggle = false;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private int _uTime = -1, _uRes = -1;
-    private int _uSaturation = -1;
 
     private string? _currentFragPath;
     private string? _loadedFragPath;
     private Action<string>? _logCallback;
-    private float _saturation = 1.0f;
     private int _lastWidth = 0;
     private int _lastHeight = 0;
 
@@ -33,8 +39,44 @@ public sealed class ShaderSurface : OpenGlControlBase {
     }
     
     public float Saturation {
-        get => _saturation;
-        set => _saturation = Math.Clamp(value, 0.0f, 2.0f);
+        get => _postProcessValues[0];
+        set => _postProcessValues[0] = Math.Clamp(value, 0.0f, 2.0f);
+    }
+
+    public float PingPongDelay {
+        get => _postProcessValues[1];
+        set => _postProcessValues[1] = Math.Clamp(value, 0.0f, 1.0f);
+    }
+
+    public bool SaturationActive {
+        get => _postProcessActive[0];
+        set => _postProcessActive[0] = value;
+    }
+
+    public bool PingPongActive {
+        get => _postProcessActive[1];
+        set => _postProcessActive[1] = value;
+    }
+
+    // Generic methods for all 5 slots
+    public bool GetSlotActive(int slot) {
+        return slot >= 0 && slot < 5 ? _postProcessActive[slot] : false;
+    }
+
+    public void SetSlotActive(int slot, bool active) {
+        if (slot >= 0 && slot < 5) {
+            _postProcessActive[slot] = active;
+        }
+    }
+
+    public float GetSlotValue(int slot) {
+        return slot >= 0 && slot < 5 ? _postProcessValues[slot] : 0.0f;
+    }
+
+    public void SetSlotValue(int slot, float value) {
+        if (slot >= 0 && slot < 5) {
+            _postProcessValues[slot] = Math.Clamp(value, 0.0f, 1.0f);
+        }
     }
 
 
@@ -87,6 +129,19 @@ public sealed class ShaderSurface : OpenGlControlBase {
             FragColor = color;
         }
         """;
+    
+    // Simple passthrough fragment shader for final render
+    private const string PassthroughFrag = """
+        #version 300 es
+        precision mediump float;
+        out vec4 FragColor;
+        uniform sampler2D u_texture;
+        uniform vec2 u_resolution;
+        void main() {
+            vec2 uv = gl_FragCoord.xy / u_resolution;
+            FragColor = texture(u_texture, uv);
+        }
+        """;
 
     protected override void OnOpenGlInit(GlInterface gl) {
         try
@@ -120,12 +175,17 @@ public sealed class ShaderSurface : OpenGlControlBase {
             // Don't build shaders here - wait until first render
             _program = 0; // Will be built on first render
             
-            // Build post-processing program
-            _postProgram = BuildProgram(VertexSrc, PostProcessFrag, out var postBuildLog);
-            if (_postProgram == 0)
+            // Load post-processing shaders
+            LoadPostProcessShaders();
+            
+            // Build passthrough program for final render
+            _passthroughProgram = BuildProgram(VertexSrc, PassthroughFrag, out var passthroughLog);
+            if (_passthroughProgram == 0)
             {
-                _logCallback?.Invoke($"Failed to build post-processing program: {postBuildLog}");
+                _logCallback?.Invoke($"Failed to build passthrough program: {passthroughLog}");
             }
+            
+            _logCallback?.Invoke($"Post-process shaders loaded. Programs: [{string.Join(", ", _postProcessPrograms)}]");
 
             RequestNextFrameRendering();
         }
@@ -202,10 +262,18 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 }
             }
 
-            // Check if we need post-processing (saturation != 1.0)
-            bool needsPostProcessing = Math.Abs(_saturation - 1.0f) > 0.001f;
+            // Check if we need post-processing (any shader is active)
+            bool needsPostProcessing = false;
+            for (int i = 0; i < 5; i++)
+            {
+                if (_postProcessActive[i] && _postProcessPrograms[i] != 0)
+                {
+                    needsPostProcessing = true;
+                    break;
+                }
+            }
 
-            if (needsPostProcessing && _postProgram != 0)
+            if (needsPostProcessing)
             {
                 // TWO-PASS RENDERING: Main shader -> Framebuffer -> Post-processing -> Screen
                 
@@ -228,21 +296,95 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 _gl.glBindVertexArray(_vao);
                 _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
 
-                // PASS 2: Render post-processing to screen
+                // PASS 2: Apply post-processing shaders in sequence
                 _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, (uint)fb); // fb is the default framebuffer
                 _gl.glViewport(0, 0, w, h);
                 _gl.glClearColor(0, 0, 0, 1);
                 _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
 
-                _gl.glUseProgram(_postProgram);
-                _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
-                _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _texture);
-                _gl.glUniform1i(_gl.glGetUniformLocation(_postProgram, "u_inputTexture"), 0);
-                if (_uSaturation >= 0) _gl.glUniform1f(_uSaturation, _saturation);
-                if (_uRes >= 0) _gl.glUniform2f(_uRes, w, h);
+                // Apply each active shader in sequence
+                uint currentTexture = _texture; // Start with main shader output
+                
+                for (int i = 0; i < 5; i++)
+                {
+                    if (_postProcessActive[i] && _postProcessPrograms[i] != 0)
+                    {
+                        // Special handling for ping-pong delay shader (slot 1)
+                        if (i == 1) // Ping-pong delay is in slot 1
+                        {
+                            uint targetBuffer = _pingPongToggle ? _pingPongFramebuffer1 : _pingPongFramebuffer2;
+                            uint feedbackTexture = _pingPongToggle ? _pingPongTexture2 : _pingPongTexture1; // Previous frame
+                            
+                            // Render ping-pong delay to ping-pong buffer
+                            _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, targetBuffer);
+                            _gl.glViewport(0, 0, w, h);
+                            // Don't clear ping-pong buffer - preserve feedback!
+                            
+                            _gl.glUseProgram(_postProcessPrograms[i]);
+                            
+                            // Bind current frame as input
+                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
+                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_texture"), 0);
+                            
+                            // Bind previous frame as feedback
+                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0 + 1);
+                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, feedbackTexture);
+                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_feedback"), 1);
+                            
+                            // Set delay amount
+                            _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_delay_amount"), _postProcessValues[i]);
+                            _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
+                            
+                            _gl.glBindVertexArray(_vao);
+                            _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                            
+                            // Update current texture to ping-pong output
+                            currentTexture = _pingPongToggle ? _pingPongTexture1 : _pingPongTexture2;
+                            
+                            // Toggle for next frame
+                            _pingPongToggle = !_pingPongToggle;
+                        }
+                        else
+                        {
+                            // Regular shader rendering to screen
+                            _gl.glUseProgram(_postProcessPrograms[i]);
+                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
+                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_texture"), 0);
+                            
+                            // Set uniforms based on shader type
+                            if (i == 0) // Saturation shader
+                            {
+                                _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_saturation"), _postProcessValues[i]);
+                            }
+                            
+                            _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
 
-                _gl.glBindVertexArray(_vao);
-                _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                            _gl.glBindVertexArray(_vao);
+                            _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                        }
+                    }
+                }
+                
+                // Final render to screen if we have any active shaders
+                if (currentTexture != _texture) // Something was processed
+                {
+                    _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, (uint)fb);
+                    _gl.glViewport(0, 0, w, h);
+                    _gl.glClearColor(0, 0, 0, 1);
+                    _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
+                    
+                    // Simple passthrough shader to render final result to screen
+                    _gl.glUseProgram(_passthroughProgram);
+                    _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                    _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
+                    _gl.glUniform1i(_gl.glGetUniformLocation(_passthroughProgram, "u_texture"), 0);
+                    _gl.glUniform2f(_gl.glGetUniformLocation(_passthroughProgram, "u_resolution"), w, h);
+                    
+                    _gl.glBindVertexArray(_vao);
+                    _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                }
             }
             else
             {
@@ -275,9 +417,19 @@ public sealed class ShaderSurface : OpenGlControlBase {
             if (_vbo != 0) _gl.glDeleteBuffers(1, ref _vbo);
             if (_vao != 0) _gl.glDeleteVertexArrays(1, ref _vao);
             if (_program != 0) _gl.glDeleteProgram(_program);
-            if (_postProgram != 0) _gl.glDeleteProgram(_postProgram);
+            if (_passthroughProgram != 0) _gl.glDeleteProgram(_passthroughProgram);
+            for (int i = 0; i < 5; i++)
+            {
+                if (_postProcessPrograms[i] != 0) _gl.glDeleteProgram(_postProcessPrograms[i]);
+            }
             if (_texture != 0) _gl.glDeleteTextures(1, ref _texture);
             if (_framebuffer != 0) _gl.glDeleteFramebuffers(1, ref _framebuffer);
+            
+            // Cleanup ping-pong buffers
+            if (_pingPongTexture1 != 0) _gl.glDeleteTextures(1, ref _pingPongTexture1);
+            if (_pingPongTexture2 != 0) _gl.glDeleteTextures(1, ref _pingPongTexture2);
+            if (_pingPongFramebuffer1 != 0) _gl.glDeleteFramebuffers(1, ref _pingPongFramebuffer1);
+            if (_pingPongFramebuffer2 != 0) _gl.glDeleteFramebuffers(1, ref _pingPongFramebuffer2);
             
             // Reset size tracking
             _lastWidth = 0;
@@ -294,12 +446,6 @@ public sealed class ShaderSurface : OpenGlControlBase {
         if (_gl is null) return;
         _uTime = _gl.glGetUniformLocation(_program, "u_time");
         _uRes  = _gl.glGetUniformLocation(_program, "u_resolution");
-        
-        // Cache post-processing uniforms
-        if (_postProgram != 0)
-        {
-            _uSaturation = _gl.glGetUniformLocation(_postProgram, "u_saturation");
-        }
     }
 
     private void CreateFramebuffer(int width, int height)
@@ -328,8 +474,113 @@ public sealed class ShaderSurface : OpenGlControlBase {
         {
             _logCallback?.Invoke("Framebuffer created successfully");
         }
+
+        // Create ping-pong buffers for delay effect
+        CreatePingPongBuffers(width, height);
     }
 
+    private void CreatePingPongBuffers(int width, int height)
+    {
+        if (_gl is null) return;
+
+        // Create ping-pong texture 1
+        _gl.glGenTextures(1, out _pingPongTexture1);
+        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongTexture1);
+        _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+
+        // Create ping-pong framebuffer 1
+        _gl.glGenFramebuffers(1, out _pingPongFramebuffer1);
+        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFramebuffer1);
+        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _pingPongTexture1, 0);
+
+        // Create ping-pong texture 2
+        _gl.glGenTextures(1, out _pingPongTexture2);
+        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongTexture2);
+        _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+
+        // Create ping-pong framebuffer 2
+        _gl.glGenFramebuffers(1, out _pingPongFramebuffer2);
+        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFramebuffer2);
+        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _pingPongTexture2, 0);
+
+        _logCallback?.Invoke("Ping-pong buffers created successfully");
+    }
+
+    private void LoadPostProcessShaders()
+    {
+        if (_gl is null) return;
+
+        try
+        {
+            // Debug: Log current directory info
+            _logCallback?.Invoke($"Current directory: {Directory.GetCurrentDirectory()}");
+            _logCallback?.Invoke($"Base directory: {AppDomain.CurrentDomain.BaseDirectory}");
+            
+            // Initialize all slots
+            for (int i = 0; i < 5; i++)
+            {
+                _postProcessPrograms[i] = 0;
+                _postProcessActive[i] = false;
+                _postProcessValues[i] = 0.0f;
+            }
+            
+            // Set default values for known shaders
+            _postProcessValues[0] = 1.0f; // Saturation default
+            _postProcessActive[0] = true; // Saturation starts active
+            
+            // Load shader files into slots
+            string[] shaderFiles = {
+                "001_saturation.glsl",
+                "002_ping_pong_delay.glsl",
+                "", // Slot 3 - empty for now
+                "", // Slot 4 - empty for now  
+                ""  // Slot 5 - empty for now
+            };
+            
+            for (int i = 0; i < 5; i++)
+            {
+                if (!string.IsNullOrEmpty(shaderFiles[i]))
+                {
+                    var shaderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shaders", "postprocess", shaderFiles[i]);
+                    if (!File.Exists(shaderPath))
+                    {
+                        shaderPath = Path.Combine(Directory.GetCurrentDirectory(), "Shaders", "postprocess", shaderFiles[i]);
+                    }
+                    
+                    if (File.Exists(shaderPath))
+                    {
+                        var shaderSource = File.ReadAllText(shaderPath);
+                        _postProcessPrograms[i] = BuildProgram(VertexSrc, shaderSource, out var buildLog);
+                        if (_postProcessPrograms[i] == 0)
+                        {
+                            _logCallback?.Invoke($"Failed to build shader {i+1} ({shaderFiles[i]}): {buildLog}");
+                        }
+                        else
+                        {
+                            _logCallback?.Invoke($"Shader {i+1} ({shaderFiles[i]}) loaded successfully");
+                        }
+                    }
+                    else
+                    {
+                        _logCallback?.Invoke($"Shader file not found for slot {i+1}: {shaderPath}");
+                    }
+                }
+                else
+                {
+                    _logCallback?.Invoke($"Slot {i+1}: Empty (passthrough)");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logCallback?.Invoke($"Error loading post-process shaders: {ex.Message}");
+        }
+    }
+    
     private uint BuildProgram(string vertex, string fragment, out string buildLog) {
         buildLog = string.Empty;
         if (_gl is null) 
