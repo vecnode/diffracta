@@ -1,8 +1,10 @@
 # Diffracta
 
-This repository contains Diffracta,  a desktop application for live video editing and cinema. It is built using .NET and [Avalonia UI](https://avaloniaui.net/). Under heavy development.
+This repository contains Diffracta, a desktop application for live video editing and cinema. It is built using .NET and [Avalonia UI](https://avaloniaui.net/). [Under heavy development]
 
 ![Diffracta](media/20251026.png)
+
+### Build desktop app on Windows 11
 
 ```powershell
 # Option 1: PowerShell Scripts (Recommended)
@@ -33,26 +35,3 @@ dotnet run --project src/App/Diffracta.csproj
 (A) : Auto-referenced package.
 ```
 
-
-### Roadmap
-
-- Add images as starting point
-- Add the code in a safe lock-unlock way in one of the tabs in the bottom right panel
-- Add a set of like 10 post-process shaders stacked that we can gate - e.g. barrel   
-- Add a starter image and the color generator as well
-- Fix the shader stacks to be high performance and controllable with the 10 post vfx  
-- Change the design of the top bars and their widgets too
-
-<!-- 
-using Melanchall.DryWetMidi.Multimedia;
-using Melanchall.DryWetMidi.Core;
-
-var input = InputDevice.GetAll().First();
-input.EventReceived += (s, e) =>
-{
-    if (e.Event is NoteOnEvent on) Console.WriteLine($"NoteOn {on.NoteNumber} vel={on.Velocity}");
-    if (e.Event is NoteOffEvent off) Console.WriteLine($"NoteOff {off.NoteNumber}");
-};
-input.StartEventsListening();
-Console.ReadLine();
-input.Dispose(); -->

@@ -37,28 +37,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             LogMessage("Application started");
             LogMessage($"Shader directory: {_shaderDir}");
             Surface.SetLogCallback(LogMessage);
-            PopulatePicker();
             SetupWatcher();
             UpdateTabContent();
             LogMessage("Ready - Select a shader from the dropdown");
-        };
-
-        ShaderPicker.SelectionChanged += (_, __) => {
-            if (ShaderPicker.SelectedItem is string filename) {
-                var fullPath = Path.Combine(_shaderDir, filename);
-                if (File.Exists(fullPath)) {
-                    Surface.LoadFragmentShaderFromFile(fullPath, out var message);
-                    UpdateTabContent();
-                }
-            }
+            
+            // Initialize with controls page
+            SwitchToPage(1);
         };
 
         PerformanceButton.Click += (_, __) => {
             TogglePerformanceMode();
-        };
-
-        LoadShaderButton.Click += async (_, __) => {
-            await LoadShaderFiles();
         };
 
         ClearLogButton.Click += (_, __) => {
@@ -78,9 +66,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             }
         };
 
-        TouchpadButton.Click += OnTouchpadClicked;
-        ResetButton.Click += OnResetButtonClicked;
-
         // Page navigation event handlers
         Page1Button.Click += (_, __) => SwitchToPage(1);
         Page2Button.Click += (_, __) => SwitchToPage(2);
@@ -96,15 +81,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
     }
 
-    private void PopulatePicker() {
+    private void PopulatePicker(ControlsPage? page = null) {
         var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
             .OrderBy(p => Path.GetFileName(p))
             .Select(p => Path.GetFileName(p))
             .ToList();
 
-        ShaderPicker.ItemsSource = items;
+        if (page != null) {
+            var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
+            if (shaderPicker != null) {
+                shaderPicker.ItemsSource = items;
         if (items.Count > 0) {
-            ShaderPicker.SelectedIndex = 0;
+                    shaderPicker.SelectedIndex = 0;
+                }
+            }
         }
     }
 
@@ -113,10 +103,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             IncludeSubdirectories = false,
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName
         };
-        _watcher.Created += (_, __) => Dispatcher.UIThread.Post(PopulatePicker);
-        _watcher.Deleted += (_, __) => Dispatcher.UIThread.Post(PopulatePicker);
-        _watcher.Renamed += (_, __) => Dispatcher.UIThread.Post(PopulatePicker);
+        _watcher.Created += (_, __) => Dispatcher.UIThread.Post(() => RefreshCurrentPage());
+        _watcher.Deleted += (_, __) => Dispatcher.UIThread.Post(() => RefreshCurrentPage());
+        _watcher.Renamed += (_, __) => Dispatcher.UIThread.Post(() => RefreshCurrentPage());
         _watcher.EnableRaisingEvents = true;
+    }
+    
+    private void RefreshCurrentPage()
+    {
+        // Refresh the current page (typically the controls page)
+        if (PageContentControl.Content is ControlsPage controlsPage)
+        {
+            PopulatePicker(controlsPage);
+        }
     }
 
     private void LogMessage(string message) {
@@ -198,26 +197,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         UpdateTabContent();
     }
 
-    private void OnSaturationChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (Surface != null && e.NewValue is double value)
-        {
-            Surface.Saturation = (float)value;
-            Slot1Value.Text = value.ToString("F2");
-            UpdateTabContent();
-        }
-    }
-
-    private void OnPingPongChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (Surface != null && e.NewValue is double value)
-        {
-            Surface.PingPongDelay = (float)value;
-            Slot2Value.Text = value.ToString("F2");
-            UpdateTabContent();
-        }
-    }
-
     private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
     private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
     private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
@@ -254,18 +233,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             Surface.SetSlotValue(slot, (float)value);
             LogMessage($"Slot {slot + 1} value changed to {value:F2}");
             
-            // Update the UI text block to show the current value
-            switch (slot)
+            // Update the UI text block to show the current value from ControlsPage
+            if (PageContentControl.Content is ControlsPage controlsPage)
             {
-                case 0:
-                    Slot1Value.Text = value.ToString("F2");
-                    break;
-                case 1:
-                    Slot2Value.Text = value.ToString("F2");
-                    break;
-                case 2:
-                    Slot3Value.Text = value.ToString("F2");
-                    break;
+                string textBlockName = $"Slot{slot + 1}Value";
+                var textBlock = controlsPage.FindControl<TextBlock>(textBlockName);
+                if (textBlock != null)
+                {
+                    textBlock.Text = value.ToString("F2");
+                }
             }
             
             UpdateTabContent();
@@ -342,16 +318,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
     private void UpdateTabContent()
     {
-        // Update Info tab
-        if (ShaderPicker.SelectedItem is string selectedShader)
+        // Update Info tab - get current shader from the controls page
+        if (PageContentControl.Content is ControlsPage controlsPage)
         {
-            var fullPath = Path.Combine(_shaderDir, selectedShader);
-            var fileInfo = new FileInfo(fullPath);
-            ShaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
-        }
-        else
-        {
-            ShaderInfoText.Text = "No shader loaded";
+            var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
+            var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
+            
+            if (shaderPicker?.SelectedItem is string selectedShader && shaderInfoText != null)
+            {
+                var fullPath = Path.Combine(_shaderDir, selectedShader);
+                var fileInfo = new FileInfo(fullPath);
+                shaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+            }
+            else if (shaderInfoText != null)
+            {
+                shaderInfoText.Text = "No shader loaded";
+            }
         }
     }
 
@@ -431,12 +413,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             if (successCount > 0)
             {
                 LogMessage($"Import complete: {successCount} files imported, {errorCount} errors");
-                PopulatePicker();
                 
-                // Auto-select the first newly imported shader
-                if (ShaderPicker.ItemsSource is IEnumerable<string> items && items.Any())
+                // Refresh the current controls page if it exists
+                if (PageContentControl.Content is ControlsPage controlsPage)
                 {
-                    ShaderPicker.SelectedIndex = 0;
+                    PopulatePicker(controlsPage);
                 }
             }
             else
@@ -461,88 +442,102 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         switch (pageNumber)
         {
             case 1:
-                // Controls page is already the default content
-                PageContentControl.Content = ControlsPage;
+                var controlsPage = new ControlsPage();
+                PageContentControl.Content = controlsPage;
+                WireUpControlsPage(controlsPage);
+                PopulatePicker(controlsPage);
                 LogMessage("Switched to Controls page");
                 break;
             case 2:
-                PageContentControl.Content = CreateToolsPage();
+                var toolsPage = new ToolsPage();
+                PageContentControl.Content = toolsPage;
+                WireUpToolsPage(toolsPage);
                 LogMessage("Switched to Tools page");
                 break;
             case 3:
-                PageContentControl.Content = CreateSettingsPage();
+                PageContentControl.Content = new SettingsPage();
                 LogMessage("Switched to Settings page");
                 break;
             case 4:
-                PageContentControl.Content = CreateHelpPage();
+                PageContentControl.Content = new HelpPage();
                 LogMessage("Switched to Help page");
                 break;
         }
     }
 
-    private Avalonia.Controls.Control CreateToolsPage()
+    private void WireUpControlsPage(ControlsPage page)
     {
-        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
-        var stackPanel = new StackPanel { Spacing = 12 };
+        // Find controls and wire up events
+        var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
+        var loadShaderButton = page.FindControl<Button>("LoadShaderButton");
+        var tempoButton = page.FindControl<Button>("TempoButton");
+        var resetButton = page.FindControl<Button>("ResetButton");
+        var touchpadButton = page.FindControl<Button>("TouchpadButton");
         
-        stackPanel.Children.Add(new TextBlock 
-        { 
-            Text = "Tools", 
-            Foreground = Avalonia.Media.Brushes.White, 
-            FontSize = 14, 
-        });
-
-      
-        var toolsStack = new StackPanel { Spacing = 8 };
-        toolsStack.Children.Add(new Button { Content = "Pad 1", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
-        toolsStack.Children.Add(new Button { Content = "Pad 2", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
-        toolsStack.Children.Add(new Button { Content = "Pad 3", Width = 60, Height = 60, Background = Avalonia.Media.Brushes.DarkGray, Foreground = Avalonia.Media.Brushes.White, BorderThickness = new Avalonia.Thickness(0), CornerRadius = new Avalonia.CornerRadius(4), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        if (shaderPicker != null)
+        {
+            shaderPicker.SelectionChanged += (_, __) => {
+                if (shaderPicker.SelectedItem is string filename) {
+                    var fullPath = Path.Combine(_shaderDir, filename);
+                    if (File.Exists(fullPath)) {
+                        Surface.LoadFragmentShaderFromFile(fullPath, out var message);
+                        UpdateTabContent();
+                    }
+                }
+            };
+        }
         
-        stackPanel.Children.Add(toolsStack);
+        if (loadShaderButton != null)
+        {
+            loadShaderButton.Click += async (_, __) => {
+                await LoadShaderFiles();
+            };
+        }
         
-        // Directory Selection Section
-        var directorySection = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(0, 16, 0, 0) };
+        if (tempoButton != null)
+        {
+            tempoButton.Click += OnTempoButtonPressed;
+        }
         
-        // Browse button only
-        var browseButton = new Button 
-        { 
-            Content = "Browse Directory", 
-            Width = 150, 
-            Height = 30,
-            Background = Avalonia.Media.Brushes.DarkGray,
-            Foreground = Avalonia.Media.Brushes.White,
-            BorderThickness = new Avalonia.Thickness(0),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
+        if (resetButton != null)
+        {
+            resetButton.Click += OnResetButtonClicked;
+        }
         
-        // Directory listing
-        var directoryListBox = new ListBox 
-        { 
-            Width = double.NaN, // Full width
-            Height = 200,
-            Background = Avalonia.Media.Brushes.DarkGray,
-            Foreground = Avalonia.Media.Brushes.White,
-            BorderBrush = Avalonia.Media.Brushes.Gray,
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            Margin = new Avalonia.Thickness(0, 8, 0, 0)
-        };
+        if (touchpadButton != null)
+        {
+            touchpadButton.Click += OnTouchpadClicked;
+        }
         
-        // Add click handler for browse button (after ListBox is declared)
-        browseButton.Click += async (_, __) => await BrowseDirectory(directoryListBox);
+        // Wire up slot controls
+        var slot1Toggle = page.FindControl<Button>("Slot1Toggle");
+        var slot2Toggle = page.FindControl<Button>("Slot2Toggle");
+        var slot3Toggle = page.FindControl<Button>("Slot3Toggle");
         
-        // No sample items - ready for actual directory contents
+        if (slot1Toggle != null) slot1Toggle.Click += OnSlot1ToggleClicked;
+        if (slot2Toggle != null) slot2Toggle.Click += OnSlot2ToggleClicked;
+        if (slot3Toggle != null) slot3Toggle.Click += OnSlot3ToggleClicked;
         
-        directorySection.Children.Add(browseButton);
-        directorySection.Children.Add(directoryListBox);
+        var slot1Slider = page.FindControl<Slider>("Slot1Slider");
+        var slot2Slider = page.FindControl<Slider>("Slot2Slider");
+        var slot3Slider = page.FindControl<Slider>("Slot3Slider");
         
-        stackPanel.Children.Add(directorySection);
-        scrollViewer.Content = stackPanel;
-        
-        return scrollViewer;
+        if (slot1Slider != null) slot1Slider.ValueChanged += OnSlot1ValueChanged;
+        if (slot2Slider != null) slot2Slider.ValueChanged += OnSlot2ValueChanged;
+        if (slot3Slider != null) slot3Slider.ValueChanged += OnSlot3ValueChanged;
     }
+    
+    private void WireUpToolsPage(ToolsPage page)
+    {
+        var browseButton = page.FindControl<Button>("BrowseButton");
+        var directoryListBox = page.FindControl<ListBox>("DirectoryListBox");
+        
+        if (browseButton != null && directoryListBox != null)
+        {
+            browseButton.Click += async (_, __) => await BrowseDirectory(directoryListBox);
+        }
+    }
+
 
     private async Task BrowseDirectory(ListBox directoryListBox)
     {
@@ -651,40 +646,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             ".exe" => "⚙️",
             _ => "📄"
         };
-    }
-
-    private Avalonia.Controls.Control CreateSettingsPage()
-    {
-        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
-        var stackPanel = new StackPanel { Spacing = 12 };
-        
-        stackPanel.Children.Add(new TextBlock 
-        { 
-            Text = "Settings", 
-            Foreground = Avalonia.Media.Brushes.White, 
-            FontSize = 14, 
-        });
-        scrollViewer.Content = stackPanel;
-        
-        return scrollViewer;
-    }
-
-    private Avalonia.Controls.Control CreateHelpPage()
-    {
-        var scrollViewer = new ScrollViewer { Margin = new Avalonia.Thickness(8) };
-        var stackPanel = new StackPanel { Spacing = 12 };
-        
-        stackPanel.Children.Add(new TextBlock 
-        { 
-            Text = "Help & Documentation", 
-            Foreground = Avalonia.Media.Brushes.White, 
-            FontSize = 14, 
-        });
-        
-      
-        scrollViewer.Content = stackPanel;
-        
-        return scrollViewer;
     }
 
 }

@@ -24,7 +24,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private uint[] _postProcessTextures = new uint[5];     // Output texture per slot
     private uint _pingPongFeedbackTexture = 0;              // For ping-pong delay feedback across frames
     private uint _pingPongFeedbackFramebuffer = 0;
-    private bool _pingPongToggle = false;
+    
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private int _uTime = -1, _uRes = -1;
 
