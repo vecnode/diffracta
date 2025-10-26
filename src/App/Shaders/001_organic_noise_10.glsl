@@ -24,39 +24,35 @@ float noise(vec2 st) {
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     
-    // Wrapping waves with turbulence
-    float wave_x = sin(uv.x * 8.0 + u_time * 0.8) * 0.5 + 0.5;
-    float wave_y = cos(uv.y * 8.0 - u_time * 0.6) * 0.5 + 0.5;
-    float combined = (wave_x + wave_y) * 0.5;
+    // Layered noise with slow movement
+    float n1 = noise(uv * 0.5 + u_time * 0.02);
+    float n2 = noise(uv * 2.0 + u_time * 0.05);
+    float n3 = noise(uv * 8.0 + u_time * 0.1);
     
-    // Add sinuous distortion
-    vec2 distorted = uv + vec2(
-        sin(uv.y * 15.0 + u_time) * 0.1,
-        cos(uv.x * 15.0 + u_time) * 0.1
-    );
+    float pattern = n1 * n2 + n3 * 0.3;
     
-    float n = noise(distorted * 8.0);
-    float n2 = noise(distorted * 16.0 + u_time * 0.5);
+    // Add radial waves
+    float dist = length(uv - 0.5);
+    float waves = sin(dist * 12.0 - u_time * 2.0);
     
-    // Underwater/abyssal colors
-    vec3 color1 = vec3(0.05, 0.1, 0.3);
-    vec3 color2 = vec3(0.1, 0.2, 0.4);
-    vec3 color3 = vec3(0.15, 0.3, 0.5);
-    vec3 color4 = vec3(0.05, 0.05, 0.1);
+    // Organic fire-like colors
+    vec3 color1 = vec3(0.1, 0.05, 0.0);
+    vec3 color2 = vec3(0.8, 0.2, 0.05);
+    vec3 color3 = vec3(1.0, 0.5, 0.0);
+    vec3 color4 = vec3(1.0, 0.9, 0.3);
     
-    float t = (combined + n * 0.7 + n2 * 0.3);
-    t = pow(t, 1.5); // Add contrast
+    float t = pattern + waves * 0.2;
+    vec3 color;
     
-    vec3 color = mix(
-        mix(color1, color2, t * 2.0),
-        mix(color3, color4, t * 2.0),
-        t
-    );
-    
-    // Add depth with pulsing effect
-    float pulse = sin(u_time * 1.5) * 0.1 + 0.9;
-    color *= pulse;
+    if(t < 0.25) {
+        color = mix(color1, color2, t / 0.25);
+    } else if(t < 0.5) {
+        color = mix(color2, color3, (t - 0.25) / 0.25);
+    } else if(t < 0.75) {
+        color = mix(color3, color4, (t - 0.5) / 0.25);
+    } else {
+        color = mix(color4, vec3(1.0), (t - 0.75) / 0.25);
+    }
     
     FragColor = vec4(color, 1.0);
 }
-

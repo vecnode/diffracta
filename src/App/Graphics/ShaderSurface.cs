@@ -360,6 +360,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
                         {
                             _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_saturation"), _postProcessValues[i]);
                         }
+                        else if (i == 2) // Barrel Distortion
+                        {
+                            _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_barrel_strength"), _postProcessValues[i]);
+                        }
                         
                         // Set resolution uniform
                         _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
@@ -570,9 +574,9 @@ public sealed class ShaderSurface : OpenGlControlBase {
             string[] shaderFiles = {
                 "001_saturation.glsl",
                 "002_ping_pong_delay.glsl",
-                "", // Slot 3 - empty for now
-                "", // Slot 4 - empty for now  
-                ""  // Slot 5 - empty for now
+                "003_barrel.glsl",
+                "", // Slot 4 - empty
+                ""  // Slot 5 - empty
             };
             
             for (int i = 0; i < 5; i++)

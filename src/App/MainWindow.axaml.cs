@@ -145,6 +145,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         PerformanceButton.Content = "Exit Performance";
         
         // Hide all UI panels but keep the shader surface visible
+        MenuBar.IsVisible = false;
+        LeftSidebar.IsVisible = false;
+        TopToolbar.IsVisible = false;
         ControlsPanel.IsVisible = false;
         BottomRightPanel.IsVisible = false;
         VerticalSplitter.IsVisible = false;
@@ -177,6 +180,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Cursor = Avalonia.Input.Cursor.Parse("Arrow");
         
         // Show all panels again
+        MenuBar.IsVisible = true;
+        LeftSidebar.IsVisible = true;
+        TopToolbar.IsVisible = true;
         ControlsPanel.IsVisible = true;
         BottomRightPanel.IsVisible = true;
         VerticalSplitter.IsVisible = true;
@@ -215,14 +221,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
     private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
     private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
-    private void OnSlot4ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(3, sender, e);
-    private void OnSlot5ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(4, sender, e);
 
     private void OnSlot1ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(0, sender, e);
     private void OnSlot2ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(1, sender, e);
     private void OnSlot3ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(2, sender, e);
-    private void OnSlot4ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(3, sender, e);
-    private void OnSlot5ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(4, sender, e);
 
     private void OnSlotToggleClicked(int slot, object? sender, RoutedEventArgs e)
     {
@@ -238,7 +240,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             {
                 button.Content = newState ? "ON" : "OFF";
                 button.Background = newState ? 
-                    Avalonia.Media.Brushes.LightGreen : Avalonia.Media.Brushes.LightCoral;
+                    Avalonia.Media.SolidColorBrush.Parse("#ff8c00") : Avalonia.Media.SolidColorBrush.Parse("#d3d3d3");
             }
             
             UpdateTabContent();
@@ -263,12 +265,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     break;
                 case 2:
                     Slot3Value.Text = value.ToString("F2");
-                    break;
-                case 3:
-                    Slot4Value.Text = value.ToString("F2");
-                    break;
-                case 4:
-                    Slot5Value.Text = value.ToString("F2");
                     break;
             }
             

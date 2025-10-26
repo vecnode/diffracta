@@ -70,7 +70,7 @@
   
   <Grid Background="#1e1e1e">
     <Grid.RowDefinitions>
-        <RowDefinition Height="20"/> <!-- Menu Bar (fixed small height) -->
+        <RowDefinition Height="Auto"/> <!-- Menu Bar (fixed small height) -->
         <RowDefinition Height="Auto"/> <!-- Toolbar -->
         <RowDefinition Height="*"/> <!-- Shader Surface (50%) -->
         <RowDefinition Height="*"/> <!-- Bottom Panel (50%) -->
@@ -83,10 +83,10 @@
     </Grid.ColumnDefinitions>
     
     <!-- Menu Bar -->
-    <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2d2d2d" Foreground="White">
+    <Menu x:Name="MenuBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2d2d2d" Foreground="White">
         <MenuItem Header="_File">
             <MenuItem Header="_New" />
-            <MenuItem Header="_Open..." />
+            <MenuItem Header="_Open" />
             <MenuItem Header="_Save" />
             <Separator />
             <MenuItem Header="E_xit" />
@@ -109,7 +109,7 @@
     </Menu>
     
     <!-- Simple Sidebar -->
-    <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="0" 
+    <Border x:Name="LeftSidebar" Grid.Row="1" Grid.RowSpan="3" Grid.Column="0" 
             Width="50" 
             Background="#1e1e1e"
             BorderBrush="#555555"
@@ -182,7 +182,7 @@
     </Border>
     
     <!-- Top toolbar -->
-    <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="8" Background="#1e1e1e">
+    <StackPanel x:Name="TopToolbar" Orientation="Horizontal" Spacing="8" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="8" Background="#1e1e1e">
       <Button x:Name="PerformanceButton" Content="Performance" Margin="0,0,0,0" />
     </StackPanel>
     
@@ -260,9 +260,8 @@
                                         <Button x:Name="Slot1Toggle" 
                                                 Content="OFF" 
                                                 Width="40" 
-                                                Height="24"
                                                 Click="OnSlot1ToggleClicked"
-                                                Background="#F44336"
+                                                Background="#d3d3d3"
                                                 Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
@@ -293,9 +292,8 @@
                                         <Button x:Name="Slot2Toggle" 
                                                 Content="OFF" 
                                                 Width="40" 
-                                                Height="24"
                                                 Click="OnSlot2ToggleClicked"
-                                                Background="#F44336"
+                                                Background="#d3d3d3"
                                                 Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
@@ -320,15 +318,14 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- SLOT 3: Empty -->
+                                    <!-- SLOT 3: Barrel Distortion -->
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="Slot 3: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Slot 3: Barrel Distortion" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
                                         <Button x:Name="Slot3Toggle" 
                                                 Content="OFF" 
                                                 Width="40" 
-                                                Height="24"
                                                 Click="OnSlot3ToggleClicked"
-                                                Background="#F44336"
+                                                Background="#d3d3d3"
                                                 Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
@@ -349,72 +346,6 @@
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
                                                 <TextBlock x:Name="Slot3Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- SLOT 4: Empty -->
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="Slot 4: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
-                                        <Button x:Name="Slot4Toggle" 
-                                                Content="OFF" 
-                                                Width="40" 
-                                                Height="24"
-                                                Click="OnSlot4ToggleClicked"
-                                                Background="#F44336"
-                                                Foreground="Black"
-                                                FontSize="10"
-                                                BorderBrush="Black"
-                                                BorderThickness="1"
-                                                CornerRadius="4">
-                                            <Button.Styles>
-                                                <Style Selector="Button:pointerover">
-                                                    <Setter Property="Background" Value="#e0e0e0"/>
-                                                </Style>
-                                            </Button.Styles>
-                                        </Button>
-                                    </StackPanel>
-                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
-                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
-                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot4Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
-                                                        ValueChanged="OnSlot4ValueChanged" Padding="0,-4,0,0"/>
-                                            </Border>
-                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <TextBlock x:Name="Slot4Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- SLOT 5: Empty -->
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="Slot 5: Empty" Foreground="#888888" FontSize="14" VerticalAlignment="Center"/>
-                                        <Button x:Name="Slot5Toggle" 
-                                                Content="OFF" 
-                                                Width="40" 
-                                                Height="24"
-                                                Click="OnSlot5ToggleClicked"
-                                                Background="#F44336"
-                                                Foreground="Black"
-                                                FontSize="10"
-                                                BorderBrush="Black"
-                                                BorderThickness="1"
-                                                CornerRadius="4">
-                                            <Button.Styles>
-                                                <Style Selector="Button:pointerover">
-                                                    <Setter Property="Background" Value="#e0e0e0"/>
-                                                </Style>
-                                            </Button.Styles>
-                                        </Button>
-                                    </StackPanel>
-                                    <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
-                                        <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
-                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot5Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
-                                                        ValueChanged="OnSlot5ValueChanged" Padding="0,-4,0,0"/>
-                                            </Border>
-                                            <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <TextBlock x:Name="Slot5Value" Text="0.00" Foreground="#888888" FontSize="14" Width="60" Padding="4"/>
                                             </Border>
                                         </StackPanel>
                                     </Border>

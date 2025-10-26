@@ -24,31 +24,38 @@ float noise(vec2 st) {
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     
-    // More aggressive noise with higher frequencies
-    float n = 0.0;
-    float amplitude = 1.0;
-    float frequency = 3.0;
+    // Wrapping waves with turbulence
+    float wave_x = sin(uv.x * 8.0 + u_time * 0.8) * 0.5 + 0.5;
+    float wave_y = cos(uv.y * 8.0 - u_time * 0.6) * 0.5 + 0.5;
+    float combined = (wave_x + wave_y) * 0.5;
     
-    for(int i = 0; i < 6; i++) {
-        n += noise(uv * frequency + u_time * 0.5) * amplitude;
-        amplitude *= 0.4;
-        frequency *= 2.5;
-    }
+    // Add sinuous distortion
+    vec2 distorted = uv + vec2(
+        sin(uv.y * 15.0 + u_time) * 0.1,
+        cos(uv.x * 15.0 + u_time) * 0.1
+    );
     
-    // Add spiraling pattern
-    float angle = atan(uv.y - 0.5, uv.x - 0.5) + n * 2.0;
-    float radius = length(uv - 0.5) + u_time * 0.2;
-    float spiral = sin(angle * 4.0 + radius * 6.0);
+    float n = noise(distorted * 8.0);
+    float n2 = noise(distorted * 16.0 + u_time * 0.5);
     
-    // Electric blue-purple color scheme
-    vec3 color1 = vec3(0.1, 0.2, 0.8);
-    vec3 color2 = vec3(0.3, 0.1, 0.9);
-    vec3 color3 = vec3(0.6, 0.2, 1.0);
-    vec3 color4 = vec3(0.9, 0.4, 0.5);
+    // Underwater/abyssal colors
+    vec3 color1 = vec3(0.05, 0.1, 0.3);
+    vec3 color2 = vec3(0.1, 0.2, 0.4);
+    vec3 color3 = vec3(0.15, 0.3, 0.5);
+    vec3 color4 = vec3(0.05, 0.05, 0.1);
     
-    float t = (spiral + n) * 0.5;
-    vec3 color = mix(mix(color1, color2, t), mix(color3, color4, t), t);
+    float t = (combined + n * 0.7 + n2 * 0.3);
+    t = pow(t, 1.5); // Add contrast
+    
+    vec3 color = mix(
+        mix(color1, color2, t * 2.0),
+        mix(color3, color4, t * 2.0),
+        t
+    );
+    
+    // Add depth with pulsing effect
+    float pulse = sin(u_time * 1.5) * 0.1 + 0.9;
+    color *= pulse;
     
     FragColor = vec4(color, 1.0);
 }
-
