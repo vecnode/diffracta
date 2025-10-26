@@ -159,7 +159,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Make the shader surface span the entire viewport
         Surface.SetValue(Grid.RowProperty, 0);
         Surface.SetValue(Grid.ColumnProperty, 0);
-        Surface.SetValue(Grid.RowSpanProperty, 3);
+        Surface.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows (menu, toolbar, shader, bottom)
         Surface.SetValue(Grid.ColumnSpanProperty, 3);
         
         LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
@@ -183,7 +183,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         HorizontalSplitter.IsVisible = true;
         
         // Restore normal layout (shader in top-right quadrant)
-        Surface.SetValue(Grid.RowProperty, 1);
+        Surface.SetValue(Grid.RowProperty, 2); // Now row 2 (after menu and toolbar)
         Surface.SetValue(Grid.ColumnProperty, 2);
         Surface.SetValue(Grid.RowSpanProperty, 1);
         Surface.SetValue(Grid.ColumnSpanProperty, 1);
@@ -238,7 +238,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             {
                 button.Content = newState ? "ON" : "OFF";
                 button.Background = newState ? 
-                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
+                    Avalonia.Media.Brushes.LightGreen : Avalonia.Media.Brushes.LightCoral;
             }
             
             UpdateTabContent();
@@ -251,6 +251,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             Surface.SetSlotValue(slot, (float)value);
             LogMessage($"Slot {slot + 1} value changed to {value:F2}");
+            
+            // Update the UI text block to show the current value
+            switch (slot)
+            {
+                case 0:
+                    Slot1Value.Text = value.ToString("F2");
+                    break;
+                case 1:
+                    Slot2Value.Text = value.ToString("F2");
+                    break;
+                case 2:
+                    Slot3Value.Text = value.ToString("F2");
+                    break;
+                case 3:
+                    Slot4Value.Text = value.ToString("F2");
+                    break;
+                case 4:
+                    Slot5Value.Text = value.ToString("F2");
+                    break;
+            }
+            
             UpdateTabContent();
         }
     }

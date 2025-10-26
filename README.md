@@ -43,3 +43,16 @@ dotnet run --project src/App/Diffracta.csproj
 - Fix the shader stacks to be high performance and controllable with the 10 post vfx  
 - Change the design of the top bars and their widgets too
 
+<!-- 
+using Melanchall.DryWetMidi.Multimedia;
+using Melanchall.DryWetMidi.Core;
+
+var input = InputDevice.GetAll().First();
+input.EventReceived += (s, e) =>
+{
+    if (e.Event is NoteOnEvent on) Console.WriteLine($"NoteOn {on.NoteNumber} vel={on.Velocity}");
+    if (e.Event is NoteOffEvent off) Console.WriteLine($"NoteOff {off.NoteNumber}");
+};
+input.StartEventsListening();
+Console.ReadLine();
+input.Dispose(); -->

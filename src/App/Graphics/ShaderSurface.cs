@@ -20,10 +20,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private uint _vbo = 0;
     private uint _framebuffer = 0;
     private uint _texture = 0;
-    private uint _pingPongTexture1 = 0;
-    private uint _pingPongTexture2 = 0;
-    private uint _pingPongFramebuffer1 = 0;
-    private uint _pingPongFramebuffer2 = 0;
+    private uint[] _postProcessFramebuffers = new uint[5]; // Dedicated buffer per post-process slot
+    private uint[] _postProcessTextures = new uint[5];     // Output texture per slot
+    private uint _pingPongFeedbackTexture = 0;              // For ping-pong delay feedback across frames
+    private uint _pingPongFeedbackFramebuffer = 0;
     private bool _pingPongToggle = false;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private int _uTime = -1, _uRes = -1;
@@ -40,7 +40,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
     
     public float Saturation {
         get => _postProcessValues[0];
-        set => _postProcessValues[0] = Math.Clamp(value, 0.0f, 2.0f);
+        set => _postProcessValues[0] = Math.Clamp(value, 0.0f, 1.0f);
     }
 
     public float PingPongDelay {
@@ -148,6 +148,13 @@ public sealed class ShaderSurface : OpenGlControlBase {
         {
             _gl = new GLLoader(gl);
             _gl.Initialize();
+            
+            // Initialize buffer arrays
+            for (int i = 0; i < 5; i++)
+            {
+                _postProcessFramebuffers[i] = 0;
+                _postProcessTextures[i] = 0;
+            }
 
             // Create fullscreen triangle vertices
             float[] vertices = {
@@ -302,69 +309,87 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 _gl.glClearColor(0, 0, 0, 1);
                 _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
 
-                // Apply each active shader in sequence
+                // Apply each active shader in sequence (post-processing pipeline)
+                // Build chain: each effect reads from previous effect's output, writes to its own dedicated buffer
                 uint currentTexture = _texture; // Start with main shader output
                 
                 for (int i = 0; i < 5; i++)
                 {
                     if (_postProcessActive[i] && _postProcessPrograms[i] != 0)
                     {
-                        // Special handling for ping-pong delay shader (slot 1)
-                        if (i == 1) // Ping-pong delay is in slot 1
+                        // Use dedicated buffer for this slot
+                        uint targetBuffer = _postProcessFramebuffers[i];
+                        uint targetTexture = _postProcessTextures[i];
+                        
+                        // Render to this slot's dedicated buffer
+                        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, targetBuffer);
+                        _gl.glViewport(0, 0, w, h);
+                        
+                        // Clear buffer for all effects except ping-pong delay (which needs feedback)
+                        if (i == 1)
                         {
-                            uint targetBuffer = _pingPongToggle ? _pingPongFramebuffer1 : _pingPongFramebuffer2;
-                            uint feedbackTexture = _pingPongToggle ? _pingPongTexture2 : _pingPongTexture1; // Previous frame
-                            
-                            // Render ping-pong delay to ping-pong buffer
-                            _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, targetBuffer);
-                            _gl.glViewport(0, 0, w, h);
-                            // Don't clear ping-pong buffer - preserve feedback!
-                            
-                            _gl.glUseProgram(_postProcessPrograms[i]);
-                            
-                            // Bind current frame as input
-                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
-                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
-                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_texture"), 0);
-                            
-                            // Bind previous frame as feedback
-                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0 + 1);
-                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, feedbackTexture);
-                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_feedback"), 1);
-                            
-                            // Set delay amount
-                            _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_delay_amount"), _postProcessValues[i]);
-                            _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
-                            
-                            _gl.glBindVertexArray(_vao);
-                            _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
-                            
-                            // Update current texture to ping-pong output
-                            currentTexture = _pingPongToggle ? _pingPongTexture1 : _pingPongTexture2;
-                            
-                            // Toggle for next frame
-                            _pingPongToggle = !_pingPongToggle;
+                            // Don't clear - ping-pong delay needs previous frame's data preserved
                         }
                         else
                         {
-                            // Regular shader rendering to screen
-                            _gl.glUseProgram(_postProcessPrograms[i]);
-                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
-                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
-                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_texture"), 0);
-                            
-                            // Set uniforms based on shader type
-                            if (i == 0) // Saturation shader
-                            {
-                                _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_saturation"), _postProcessValues[i]);
-                            }
-                            
-                            _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
-
-                            _gl.glBindVertexArray(_vao);
-                            _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                            _gl.glClearColor(0, 0, 0, 1);
+                            _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
                         }
+                        
+                        _gl.glUseProgram(_postProcessPrograms[i]);
+                        
+                        // Bind the input texture (from previous effect in chain)
+                        _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, currentTexture);
+                        _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_texture"), 0);
+                        
+                        // Ping-pong delay (slot 1) needs additional feedback texture
+                        if (i == 1)
+                        {
+                            // Bind previous frame's output as feedback
+                            _gl.glActiveTexture(GLLoader.GL_TEXTURE0 + 1);
+                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongFeedbackTexture);
+                            _gl.glUniform1i(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_feedback"), 1);
+                            
+                            // Set delay amount parameter
+                            _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_delay_amount"), _postProcessValues[i]);
+                        }
+                        
+                        // Set effect-specific uniforms
+                        if (i == 0) // Saturation
+                        {
+                            _gl.glUniform1f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_saturation"), _postProcessValues[i]);
+                        }
+                        
+                        // Set resolution uniform
+                        _gl.glUniform2f(_gl.glGetUniformLocation(_postProcessPrograms[i], "u_resolution"), w, h);
+                        
+                        // Draw the effect
+                        _gl.glBindVertexArray(_vao);
+                        _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
+                        
+                        // Update current texture for next effect in the chain
+                        currentTexture = targetTexture;
                     }
+                }
+                
+                // Update ping-pong feedback buffer for next frame (if ping-pong is active)
+                if (_postProcessActive[1] && _postProcessPrograms[1] != 0)
+                {
+                    // Copy current ping-pong output to feedback buffer for next frame
+                    _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFeedbackFramebuffer);
+                    _gl.glViewport(0, 0, w, h);
+                    _gl.glClearColor(0, 0, 0, 1);
+                    _gl.glClear(GLLoader.GL_COLOR_BUFFER_BIT);
+                    
+                    // Use passthrough shader to copy texture
+                    _gl.glUseProgram(_passthroughProgram);
+                    _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                    _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _postProcessTextures[1]);
+                    _gl.glUniform1i(_gl.glGetUniformLocation(_passthroughProgram, "u_texture"), 0);
+                    _gl.glUniform2f(_gl.glGetUniformLocation(_passthroughProgram, "u_resolution"), w, h);
+                    _gl.glBindVertexArray(_vao);
+                    _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
                 }
                 
                 // Final render to screen if we have any active shaders
@@ -425,11 +450,16 @@ public sealed class ShaderSurface : OpenGlControlBase {
             if (_texture != 0) _gl.glDeleteTextures(1, ref _texture);
             if (_framebuffer != 0) _gl.glDeleteFramebuffers(1, ref _framebuffer);
             
-            // Cleanup ping-pong buffers
-            if (_pingPongTexture1 != 0) _gl.glDeleteTextures(1, ref _pingPongTexture1);
-            if (_pingPongTexture2 != 0) _gl.glDeleteTextures(1, ref _pingPongTexture2);
-            if (_pingPongFramebuffer1 != 0) _gl.glDeleteFramebuffers(1, ref _pingPongFramebuffer1);
-            if (_pingPongFramebuffer2 != 0) _gl.glDeleteFramebuffers(1, ref _pingPongFramebuffer2);
+            // Cleanup post-process buffers
+            for (int i = 0; i < 5; i++)
+            {
+                if (_postProcessTextures[i] != 0) _gl.glDeleteTextures(1, ref _postProcessTextures[i]);
+                if (_postProcessFramebuffers[i] != 0) _gl.glDeleteFramebuffers(1, ref _postProcessFramebuffers[i]);
+            }
+            
+            // Cleanup ping-pong feedback buffer
+            if (_pingPongFeedbackTexture != 0) _gl.glDeleteTextures(1, ref _pingPongFeedbackTexture);
+            if (_pingPongFeedbackFramebuffer != 0) _gl.glDeleteFramebuffers(1, ref _pingPongFeedbackFramebuffer);
             
             // Reset size tracking
             _lastWidth = 0;
@@ -475,39 +505,42 @@ public sealed class ShaderSurface : OpenGlControlBase {
             _logCallback?.Invoke("Framebuffer created successfully");
         }
 
-        // Create ping-pong buffers for delay effect
-        CreatePingPongBuffers(width, height);
+        // Create post-processing buffers for each slot and ping-pong feedback
+        CreatePostProcessBuffers(width, height);
     }
 
-    private void CreatePingPongBuffers(int width, int height)
+    private void CreatePostProcessBuffers(int width, int height)
     {
         if (_gl is null) return;
 
-        // Create ping-pong texture 1
-        _gl.glGenTextures(1, out _pingPongTexture1);
-        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongTexture1);
+        // Create dedicated buffers for each post-process slot
+        for (int i = 0; i < 5; i++)
+        {
+            // Create texture
+            _gl.glGenTextures(1, out _postProcessTextures[i]);
+            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _postProcessTextures[i]);
+            _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
+            _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+            _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+
+            // Create framebuffer
+            _gl.glGenFramebuffers(1, out _postProcessFramebuffers[i]);
+            _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _postProcessFramebuffers[i]);
+            _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _postProcessTextures[i], 0);
+        }
+
+        // Create dedicated ping-pong feedback buffer (for delay effect)
+        _gl.glGenTextures(1, out _pingPongFeedbackTexture);
+        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongFeedbackTexture);
         _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
         _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
         _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
 
-        // Create ping-pong framebuffer 1
-        _gl.glGenFramebuffers(1, out _pingPongFramebuffer1);
-        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFramebuffer1);
-        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _pingPongTexture1, 0);
+        _gl.glGenFramebuffers(1, out _pingPongFeedbackFramebuffer);
+        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFeedbackFramebuffer);
+        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _pingPongFeedbackTexture, 0);
 
-        // Create ping-pong texture 2
-        _gl.glGenTextures(1, out _pingPongTexture2);
-        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _pingPongTexture2);
-        _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, width, height, 0, GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, IntPtr.Zero);
-        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
-        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
-
-        // Create ping-pong framebuffer 2
-        _gl.glGenFramebuffers(1, out _pingPongFramebuffer2);
-        _gl.glBindFramebuffer(GLLoader.GL_FRAMEBUFFER, _pingPongFramebuffer2);
-        _gl.glFramebufferTexture2D(GLLoader.GL_FRAMEBUFFER, GLLoader.GL_COLOR_ATTACHMENT0, GLLoader.GL_TEXTURE_2D, _pingPongTexture2, 0);
-
-        _logCallback?.Invoke("Ping-pong buffers created successfully");
+        _logCallback?.Invoke("Post-process buffers created successfully");
     }
 
     private void LoadPostProcessShaders()
@@ -528,9 +561,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 _postProcessValues[i] = 0.0f;
             }
             
-            // Set default values for known shaders
-            _postProcessValues[0] = 1.0f; // Saturation default
-            _postProcessActive[0] = true; // Saturation starts active
+            // Set default values for known shaders (all 0.0 to 1.0 range)
+            _postProcessValues[0] = 1.0f; // Saturation default (fully saturated)
+            _postProcessValues[1] = 0.0f; // Ping-pong delay default
+            // All slots start as inactive (OFF)
             
             // Load shader files into slots
             string[] shaderFiles = {

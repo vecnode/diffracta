@@ -70,9 +70,10 @@
   
   <Grid Background="#1e1e1e">
     <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
-        <RowDefinition Height="*"/>
+        <RowDefinition Height="20"/> <!-- Menu Bar (fixed small height) -->
+        <RowDefinition Height="Auto"/> <!-- Toolbar -->
+        <RowDefinition Height="*"/> <!-- Shader Surface (50%) -->
+        <RowDefinition Height="*"/> <!-- Bottom Panel (50%) -->
     </Grid.RowDefinitions>
     
     <Grid.ColumnDefinitions>
@@ -81,8 +82,34 @@
         <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
     
+    <!-- Menu Bar -->
+    <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2d2d2d" Foreground="White">
+        <MenuItem Header="_File">
+            <MenuItem Header="_New" />
+            <MenuItem Header="_Open..." />
+            <MenuItem Header="_Save" />
+            <Separator />
+            <MenuItem Header="E_xit" />
+        </MenuItem>
+        <MenuItem Header="_Edit">
+            <MenuItem Header="Cu_t" />
+            <MenuItem Header="_Copy" />
+            <MenuItem Header="_Paste" />
+        </MenuItem>
+        <MenuItem Header="_View">
+            <MenuItem Header="Toggle Performance Mode" />
+            <Separator />
+            <MenuItem Header="Show Log" />
+            <MenuItem Header="Show Info" />
+        </MenuItem>
+        <MenuItem Header="_Help">
+            <MenuItem Header="_About" />
+            <MenuItem Header="Documentation" />
+        </MenuItem>
+    </Menu>
+    
     <!-- Simple Sidebar -->
-    <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" 
+    <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="0" 
             Width="50" 
             Background="#1e1e1e"
             BorderBrush="#555555"
@@ -155,12 +182,12 @@
     </Border>
     
     <!-- Top toolbar -->
-    <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="8" Background="#1e1e1e">
+    <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="8" Background="#1e1e1e">
       <Button x:Name="PerformanceButton" Content="Performance" Margin="0,0,0,0" />
     </StackPanel>
     
     <!-- Left Panel (Page-based Navigation) - Full Height -->
-    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" x:Name="ControlsPanel" Background="#2d2d2d">
+    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" x:Name="ControlsPanel" Background="#2d2d2d">
         <ContentControl x:Name="PageContentControl">
             <!-- Page 1: Controls (Default) -->
             <Grid x:Name="ControlsPage">
@@ -231,21 +258,27 @@
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <TextBlock Text="Slot 1: Saturation" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
                                         <Button x:Name="Slot1Toggle" 
-                                                Content="ON" 
+                                                Content="OFF" 
                                                 Width="40" 
                                                 Height="24"
                                                 Click="OnSlot1ToggleClicked"
-                                                Background="#4CAF50"
-                                                Foreground="White"
+                                                Background="#F44336"
+                                                Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
                                                 BorderThickness="1"
-                                                CornerRadius="2"/>
+                                                CornerRadius="4">
+                                            <Button.Styles>
+                                                <Style Selector="Button:pointerover">
+                                                    <Setter Property="Background" Value="#e0e0e0"/>
+                                                </Style>
+                                            </Button.Styles>
+                                        </Button>
                                     </StackPanel>
                                     <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
                                         <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot1Slider" Minimum="0" Maximum="2" Value="1" Width="200" 
+                                                <Slider x:Name="Slot1Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
                                                         ValueChanged="OnSlot1ValueChanged" Padding="0,-4,0,0"/>
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
@@ -263,16 +296,22 @@
                                                 Height="24"
                                                 Click="OnSlot2ToggleClicked"
                                                 Background="#F44336"
-                                                Foreground="White"
+                                                Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
                                                 BorderThickness="1"
-                                                CornerRadius="2"/>
+                                                CornerRadius="4">
+                                            <Button.Styles>
+                                                <Style Selector="Button:pointerover">
+                                                    <Setter Property="Background" Value="#e0e0e0"/>
+                                                </Style>
+                                            </Button.Styles>
+                                        </Button>
                                     </StackPanel>
                                     <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
                                         <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot2Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                <Slider x:Name="Slot2Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
                                                         ValueChanged="OnSlot2ValueChanged" Padding="0,-4,0,0"/>
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
@@ -290,16 +329,22 @@
                                                 Height="24"
                                                 Click="OnSlot3ToggleClicked"
                                                 Background="#F44336"
-                                                Foreground="White"
+                                                Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
                                                 BorderThickness="1"
-                                                CornerRadius="2"/>
+                                                CornerRadius="4">
+                                            <Button.Styles>
+                                                <Style Selector="Button:pointerover">
+                                                    <Setter Property="Background" Value="#e0e0e0"/>
+                                                </Style>
+                                            </Button.Styles>
+                                        </Button>
                                     </StackPanel>
                                     <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
                                         <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot3Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                <Slider x:Name="Slot3Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
                                                         ValueChanged="OnSlot3ValueChanged" Padding="0,-4,0,0"/>
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
@@ -317,16 +362,22 @@
                                                 Height="24"
                                                 Click="OnSlot4ToggleClicked"
                                                 Background="#F44336"
-                                                Foreground="White"
+                                                Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
                                                 BorderThickness="1"
-                                                CornerRadius="2"/>
+                                                CornerRadius="4">
+                                            <Button.Styles>
+                                                <Style Selector="Button:pointerover">
+                                                    <Setter Property="Background" Value="#e0e0e0"/>
+                                                </Style>
+                                            </Button.Styles>
+                                        </Button>
                                     </StackPanel>
                                     <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
                                         <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot4Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                <Slider x:Name="Slot4Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
                                                         ValueChanged="OnSlot4ValueChanged" Padding="0,-4,0,0"/>
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
@@ -344,16 +395,22 @@
                                                 Height="24"
                                                 Click="OnSlot5ToggleClicked"
                                                 Background="#F44336"
-                                                Foreground="White"
+                                                Foreground="Black"
                                                 FontSize="10"
                                                 BorderBrush="Black"
                                                 BorderThickness="1"
-                                                CornerRadius="2"/>
+                                                CornerRadius="4">
+                                            <Button.Styles>
+                                                <Style Selector="Button:pointerover">
+                                                    <Setter Property="Background" Value="#e0e0e0"/>
+                                                </Style>
+                                            </Button.Styles>
+                                        </Button>
                                     </StackPanel>
                                     <Border BorderBrush="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True" Height="36">
                                         <StackPanel Orientation="Horizontal" Spacing="0" Background="#2D2D2D">
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                                                <Slider x:Name="Slot5Slider" Minimum="0" Maximum="1" Value="0" Width="200" 
+                                                <Slider x:Name="Slot5Slider" Minimum="0" Maximum="1" Value="0.5" Width="200" 
                                                         ValueChanged="OnSlot5ValueChanged" Padding="0,-4,0,0"/>
                                             </Border>
                                             <Border BorderBrush="Black" BorderThickness="1" Padding="4">
@@ -395,17 +452,17 @@
     </Grid>
     
     <!-- Vertical splitter between left and right columns -->
-    <GridSplitter Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Width="3" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
+    <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Width="3" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
     
     <!-- Top Right: Shader Surface -->
-    <gfx:ShaderSurface x:Name="Surface" Grid.Row="1" Grid.Column="2" Margin="0" Focusable="True" ClipToBounds="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+    <gfx:ShaderSurface x:Name="Surface" Grid.Row="2" Grid.Column="2" Margin="0" Focusable="True" ClipToBounds="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     
     <!-- Horizontal splitter between top and bottom rows (right side only) -->
-    <GridSplitter Grid.Row="1" Grid.Column="2" Height="3" Background="#555555" VerticalAlignment="Bottom" x:Name="HorizontalSplitter"/>
+    <GridSplitter Grid.Row="2" Grid.Column="2" Height="3" Background="#555555" VerticalAlignment="Bottom" x:Name="HorizontalSplitter"/>
     
     
     <!-- Bottom Right: Tabbed Panel -->
-    <Grid Grid.Row="2" Grid.Column="2" x:Name="BottomRightPanel" Background="#2d2d2d">
+    <Grid Grid.Row="3" Grid.Column="2" x:Name="BottomRightPanel" Background="#2d2d2d">
         <TabControl Background="#2d2d2d" Foreground="White">
             <TabItem Header="Log" Background="#2d2d2d" FontSize="14" Foreground="White">
                 <Grid Background="#1e1e1e">
