@@ -50,4 +50,9 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
+
+    <!-- Include Image files as embedded resources -->
+    <ItemGroup>
+        <AvaloniaResource Include="Images\**\*" />
+    </ItemGroup>
 </Project>

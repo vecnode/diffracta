@@ -19,8 +19,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private MainTempo _globalTempoNumber;
     private DispatcherTimer? _tempoTimer;
     private bool _isTempoRunning = false;
+    private bool _isLogPanelVisible = false;
     
-
+    // Slider state management
+    private readonly bool[] _slotActiveStates = new bool[3];
+    private readonly float[] _slotValues = new float[3];
+    
+    
     public new event PropertyChangedEventHandler? PropertyChanged;
 
     public MainWindow() {
@@ -47,6 +52,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
         PerformanceButton.Click += (_, __) => {
             TogglePerformanceMode();
+        };
+
+        LogsButton.Click += (_, __) => {
+            ToggleLogPanel();
         };
 
         ClearLogButton.Click += (_, __) => {
@@ -81,7 +90,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
     }
 
-    private void PopulatePicker(ControlsPage? page = null) {
+    private void PopulatePicker(LivePage? page = null) {
         var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
             .OrderBy(p => Path.GetFileName(p))
             .Select(p => Path.GetFileName(p))
@@ -112,13 +121,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void RefreshCurrentPage()
     {
         // Refresh the current page (typically the controls page)
-        if (PageContentControl.Content is ControlsPage controlsPage)
+        if (PageContentControl.Content is LivePage controlsPage)
         {
             PopulatePicker(controlsPage);
         }
     }
 
-    private void LogMessage(string message) {
+    public void LogMessage(string message) {
         var timestamp = DateTime.Now.ToString("HH:mm:ss");
         var logEntry = $"[{timestamp}] {message}";
         
@@ -197,6 +206,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         UpdateTabContent();
     }
 
+    private void ToggleLogPanel()
+    {
+        _isLogPanelVisible = !_isLogPanelVisible;
+        LogPopupPanel.IsVisible = _isLogPanelVisible;
+        
+        if (_isLogPanelVisible)
+        {
+            LogMessage("Log panel opened");
+        }
+        else
+        {
+            LogMessage("Log panel closed");
+        }
+    }
+
     private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
     private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
     private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
@@ -211,6 +235,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             bool newState = !Surface.GetSlotActive(slot);
             Surface.SetSlotActive(slot, newState);
+            _slotActiveStates[slot] = newState; // Store state
             LogMessage($"Slot {slot + 1} shader {(newState ? "activated" : "deactivated")}");
             
             // Update button appearance
@@ -231,10 +256,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (Surface != null && e.NewValue is double value)
         {
             Surface.SetSlotValue(slot, (float)value);
+            _slotValues[slot] = (float)value; // Store value
             LogMessage($"Slot {slot + 1} value changed to {value:F2}");
             
-            // Update the UI text block to show the current value from ControlsPage
-            if (PageContentControl.Content is ControlsPage controlsPage)
+            // Update the UI text block to show the current value from LivePage
+            if (PageContentControl.Content is LivePage controlsPage)
             {
                 string textBlockName = $"Slot{slot + 1}Value";
                 var textBlock = controlsPage.FindControl<TextBlock>(textBlockName);
@@ -247,6 +273,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             UpdateTabContent();
         }
     }
+    
+    // Get slot states for restoration
+    public bool GetSlotActive(int slot) => _slotActiveStates[slot];
+    public float GetSlotValue(int slot) => _slotValues[slot];
 
     private void OnTouchpadClicked(object? sender, RoutedEventArgs e)
     {
@@ -319,7 +349,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void UpdateTabContent()
     {
         // Update Info tab - get current shader from the controls page
-        if (PageContentControl.Content is ControlsPage controlsPage)
+        if (PageContentControl.Content is LivePage controlsPage)
         {
             var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
             var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
@@ -337,7 +367,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private async Task LoadShaderFiles()
+    public async Task LoadShaderFiles()
     {
         try
         {
@@ -415,7 +445,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 LogMessage($"Import complete: {successCount} files imported, {errorCount} errors");
                 
                 // Refresh the current controls page if it exists
-                if (PageContentControl.Content is ControlsPage controlsPage)
+                if (PageContentControl.Content is LivePage controlsPage)
                 {
                     PopulatePicker(controlsPage);
                 }
@@ -442,20 +472,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         switch (pageNumber)
         {
             case 1:
-                var controlsPage = new ControlsPage();
+                var controlsPage = new LivePage();
                 PageContentControl.Content = controlsPage;
-                WireUpControlsPage(controlsPage);
+                WireUpLivePage(controlsPage);
                 PopulatePicker(controlsPage);
                 LogMessage("Switched to Controls page");
                 break;
             case 2:
                 var toolsPage = new ToolsPage();
                 PageContentControl.Content = toolsPage;
-                WireUpToolsPage(toolsPage);
+                toolsPage.SetParentWindow(this);
                 LogMessage("Switched to Tools page");
                 break;
             case 3:
-                PageContentControl.Content = new SettingsPage();
+                var settingsPage = new SettingsPage();
+                PageContentControl.Content = settingsPage;
+                settingsPage.SetParentWindow(this);
                 LogMessage("Switched to Settings page");
                 break;
             case 4:
@@ -465,11 +497,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private void WireUpControlsPage(ControlsPage page)
+    private void WireUpLivePage(LivePage page)
     {
         // Find controls and wire up events
         var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
-        var loadShaderButton = page.FindControl<Button>("LoadShaderButton");
         var tempoButton = page.FindControl<Button>("TempoButton");
         var resetButton = page.FindControl<Button>("ResetButton");
         var touchpadButton = page.FindControl<Button>("TouchpadButton");
@@ -484,13 +515,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                         UpdateTabContent();
                     }
                 }
-            };
-        }
-        
-        if (loadShaderButton != null)
-        {
-            loadShaderButton.Click += async (_, __) => {
-                await LoadShaderFiles();
             };
         }
         

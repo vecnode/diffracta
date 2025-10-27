@@ -6,6 +6,8 @@
         <StackPanel Spacing="12">
             <TextBlock Text="Help &amp; Documentation" Foreground="White" FontSize="14"/>
             
+            <Image Source="avares://Diffracta/Images/default/smpte_color_bars.png" Width="600" HorizontalAlignment="Left"/>
+            
             <!-- Help content will go here -->
         </StackPanel>
     </ScrollViewer>

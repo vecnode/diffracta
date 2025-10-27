@@ -5,7 +5,7 @@
         xmlns:gfx="using:Diffracta.Graphics"
         x:Class="Diffracta.MainWindow"
         x:DataType="local:MainWindow"
-        Width="1080" Height="720" Title="Diffracta (v:0.1)">
+        Width="1280" Height="720" Title="Diffracta (v0.1) 720p Window">
   
   <Window.Resources>
     <!-- Custom Thumb Template for Square Thumb -->
@@ -101,6 +101,7 @@
     <!-- Top toolbar -->
     <StackPanel x:Name="TopToolbar" Orientation="Horizontal" Spacing="8" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="8" Background="#1e1e1e">
       <Button x:Name="PerformanceButton" Content="Performance" Margin="0,0,0,0" />
+      <Button x:Name="LogsButton" Content="Logs" Margin="0,0,0,0" />
     </StackPanel>
 
     
@@ -199,40 +200,60 @@
     <!-- Bottom Right: Tabbed Panel -->
     <Grid Grid.Row="3" Grid.Column="2" x:Name="BottomRightPanel" Background="#2d2d2d">
         <TabControl Background="#2d2d2d" Foreground="White">
-            <TabItem Header="Log" Background="#2d2d2d" FontSize="14" Foreground="White">
-                <Grid Background="#1e1e1e">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
-                        <TextBlock Text="Debug Log" Foreground="White" VerticalAlignment="Center"/>
-                        <Button x:Name="ClearLogButton" Content="Clear" Width="60"/>
-                        <Button x:Name="CopyLogButton" Content="Copy" Width="60"/>
-                    </StackPanel>
-                    
-                    <ScrollViewer Grid.Row="1" Margin="8,0,8,8" x:Name="LogScrollViewer">
-                        <TextBlock x:Name="LogTextBox" 
-                                   Background="Transparent" 
-                                   Foreground="White" 
-                                   TextWrapping="Wrap"
-                                   FontFamily="Consolas"
-                                   FontSize="12"/>
-                    </ScrollViewer>
-                </Grid>
-            </TabItem>
-            
-            <TabItem Header="Info" Background="#2d2d2d" FontSize="14" Foreground="White">
-                <ScrollViewer Margin="8">
-                    <StackPanel Spacing="8">
+            <TabItem Header="Global" Background="#1e1e1e" FontSize="14" Foreground="White">
+                <ScrollViewer Margin="4" >
+                    <StackPanel Spacing="4">
+                        <ProgressBar x:Name="GlobalProgressBar" 
+                                     Height="20" 
+                                     Minimum="0" 
+                                     Maximum="100" 
+                                     Value="0"
+                                     ShowProgressText="True"
+                                     Foreground="#ff8c00"
+                                     CornerRadius="0"/>
+                        
                         <TextBlock Text="Shader Information" Foreground="White" FontSize="14"/>
                         <TextBlock x:Name="ShaderInfoText" Text="No shader loaded" Foreground="#cccccc" FontSize="14" TextWrapping="Wrap"/>
+                        
+                        
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            
         </TabControl>
     </Grid>
+    
+    <!-- Bottom Log Popup Panel -->
+    <Border x:Name="LogPopupPanel" 
+            Grid.RowSpan="4" 
+            Grid.ColumnSpan="3"
+            Background="#2d2d2d" 
+            BorderBrush="#555555"
+            BorderThickness="0,2,0,0"
+            IsVisible="False"
+            VerticalAlignment="Bottom"
+            Height="220"
+            ClipToBounds="False">
+        <Grid Background="#1e1e1e">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,4" Grid.Row="0">
+                <TextBlock Text="Debug Log" Foreground="White" VerticalAlignment="Center"/>
+                <Button x:Name="ClearLogButton" Content="Clear" Width="60" Height="30" FontSize="12"/>
+                <Button x:Name="CopyLogButton" Content="Copy" Width="60" Height="30" FontSize="12"/>
+            </StackPanel>
+            
+            <ScrollViewer Grid.Row="1" Margin="8,0,8,8" x:Name="LogScrollViewer">
+                <TextBlock x:Name="LogTextBox" 
+                           Background="Transparent" 
+                           Foreground="White" 
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas"
+                           FontSize="12"/>
+            </ScrollViewer>
+        </Grid>
+    </Border>
   </Grid>
 </Window>
