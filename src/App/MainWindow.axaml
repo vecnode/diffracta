@@ -67,27 +67,33 @@
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
     
-    <!-- MenuItem styling - white text -->
+    <!-- MenuItem styling - white text, grey background -->
     <Style Selector="MenuItem">
       <Setter Property="Foreground" Value="White"/>
-    </Style>
-    
-    <!-- MenuItem popup background (dropdowns) -->
-    <Style Selector="MenuItem > Popup > Border">
       <Setter Property="Background" Value="#2d2d2d"/>
     </Style>
     
-    <!-- ComboBox styling -->
+    <!-- MenuItem popup dropdown background -->
+    <Style Selector="MenuItem > Popup > Border">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="BorderBrush" Value="#2d2d2d"/>
+    </Style>
+
+    <Style Selector="MenuItem">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="BorderBrush" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- MenuItem hover - keep white text -->
+    <Style Selector="MenuItem:pointerover">
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- ComboBox styling - grey background, white text -->
     <Style Selector="ComboBox">
       <Setter Property="Background" Value="#2d2d2d"/>
       <Setter Property="Foreground" Value="White"/>
-    </Style>
-    
-    <!-- ComboBox dropdown popup background -->
-    <Style Selector="ComboBox /template/ Popup > Border">
-      <Setter Property="Background" Value="#2d2d2d"/>
-      <Setter Property="BorderBrush" Value="#555555"/>
-      <Setter Property="BorderThickness" Value="1"/>
     </Style>
     
     <!-- ComboBox items -->
@@ -95,22 +101,14 @@
       <Setter Property="Background" Value="#2d2d2d"/>
       <Setter Property="Foreground" Value="White"/>
     </Style>
-    
-    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#3d3d3d"/>
-    </Style>
-    
-    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
-      <Setter Property="Background" Value="#4d4d4d"/>
-    </Style>
   </Window.Styles>
   
   <Grid Background="#1e1e1e">
     <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/> <!-- Menu Bar (fixed small height) -->
-        <RowDefinition Height="Auto"/> <!-- Toolbar -->
-        <RowDefinition Height="*"/> <!-- Shader Surface (25%) -->
-        <RowDefinition Height="3*"/> <!-- Bottom Panel (75%) -->
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="3*"/>
     </Grid.RowDefinitions>
     
     <Grid.ColumnDefinitions>
@@ -252,6 +250,19 @@
                         <TextBlock Text="Shader Information" Foreground="White" FontSize="14"/>
                         <TextBlock x:Name="ShaderInfoText" Text="No shader loaded" Foreground="#cccccc" FontSize="14" TextWrapping="Wrap"/>
                         
+                        <!-- MIDI Devices Box -->
+                        <Border BorderBrush="Black" BorderThickness="1" Padding="4">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="MIDI Devices" Foreground="White" FontSize="14"/>
+                                <ListBox x:Name="MidiDevicesList"
+                                         Height="120"
+                                         Background="DarkGray"
+                                         Foreground="White"
+                                         BorderBrush="Gray"
+                                         BorderThickness="1"
+                                         CornerRadius="4"/>
+                            </StackPanel>
+                        </Border>
                         
                     </StackPanel>
                 </ScrollViewer>

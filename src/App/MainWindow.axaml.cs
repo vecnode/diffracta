@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.ComponentModel;
+using System.Collections.Generic;
+using Melanchall.DryWetMidi.Multimedia;
 
 namespace Diffracta;
 
@@ -363,6 +365,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             else if (shaderInfoText != null)
             {
                 shaderInfoText.Text = "No shader loaded";
+            }
+        }
+
+        // Populate MIDI devices list in Global tab
+        var midiList = this.FindControl<ListBox>("MidiDevicesList");
+        if (midiList != null)
+        {
+            try
+            {
+                var names = new List<string>();
+                foreach (var device in InputDevice.GetAll())
+                {
+                    try { names.Add(device.Name); }
+                    finally { device.Dispose(); }
+                }
+
+                if (names.Count == 0)
+                {
+                    midiList.ItemsSource = new[] { "None" };
+                }
+                else
+                {
+                    midiList.ItemsSource = names.OrderBy(n => n).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                midiList.ItemsSource = new[] { $"Error: {ex.Message}" };
             }
         }
     }

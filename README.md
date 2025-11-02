@@ -25,14 +25,15 @@ dotnet run --project src/App/Diffracta.csproj
 
 ```
 [net8.0]: 
-   Top-level Package                    Requested    Resolved
-   > Avalonia                           11.1.3       11.1.3
-   > Avalonia.Desktop                   11.1.3       11.1.3
-   > Avalonia.Diagnostics               11.1.3       11.1.3
-   > Avalonia.Themes.Fluent             11.1.3       11.1.3
-   > Microsoft.NET.ILLink.Tasks   (A)   [8.0.20, )   8.0.20
+Packages in use:
 
-(A) : Auto-referenced package.
+•  Avalonia 11.3.5
+•  Avalonia.Desktop 11.3.5
+•  Avalonia.Diagnostics 11.3.5
+•  Avalonia.Themes.Fluent 11.3.5
+•  FFMpegCore 5.4.0
+•  Melanchall.DryWetMidi 8.0.2
+
 ```
 
 ### Build/Run Docker on Windows 11/WSL
@@ -48,9 +49,7 @@ dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /nores
 wsl --set-default-version 2
 # Restart your computer
 Restart-Computer
-```
 
-```sh
 # Build the image and launch the app
 # 1) Build the image
 docker build -t diffracta:latest .

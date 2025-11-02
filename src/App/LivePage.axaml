@@ -61,13 +61,13 @@
 
                 <Border Background="#1e1e1e" Padding="4">
                     <StackPanel Spacing="8">
-                        <Button Width="60" Height="40" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
+                        <Button Width="80" Height="60" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
                             <TextBlock Text="Pad 1" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
-                        <Button Width="60" Height="40" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
+                        <Button Width="80" Height="60" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
                             <TextBlock Text="Pad 2" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
-                        <Button Width="60" Height="40" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
+                        <Button Width="80" Height="60" Background="DarkGray" BorderThickness="0" CornerRadius="4" VerticalAlignment="Center">
                             <TextBlock Text="Pad 3" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </StackPanel>

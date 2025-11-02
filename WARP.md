@@ -33,7 +33,7 @@ Notes
 - Project layout
   - Single Avalonia desktop app: `src/App/Diffracta.csproj` targeting `net8.0`.
   - Build config: `Directory.Build.props` stores NuGet packages under `cache/packages` in-repo.
-  - Assets: `Images/**` embedded as Avalonia resources; app/icon files copied alongside the executable.
+  - Assets: `Media/**` embedded as Avalonia resources; app/icon files copied alongside the executable.
 
 - App bootstrap and UI
   - Entry: `src/App/Program.cs` builds Avalonia app; `src/App/App.axaml(.cs)` loads global styles; `src/App/MainWindow.axaml(.cs)` is the main shell.

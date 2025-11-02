@@ -1,0 +1,1 @@
+uploaded and default images in this folder
