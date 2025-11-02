@@ -58,32 +58,3 @@ docker build -t diffracta:latest .
 docker run --rm -e DISPLAY='host.docker.internal:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 
 ```
-
-```sh
-# Docker Utils
-# List all Docker images
-docker images
-# Or shorter version
-docker image ls
-# List all running containers
-docker ps
-# List ALL containers (running and stopped)
-docker ps -a
-# Or shorter version
-docker container ls -a
-
-# Remove a specific image
-docker rmi diffracta:latest
-# Remove by image ID
-docker rmi <IMAGE_ID>
-# Force remove (even if in use - use with caution!)
-docker rmi -f diffracta:latest
-# Remove all unused images
-docker image prune
-# Remove ALL unused images (not just dangling)
-docker image prune -a
-# DANGEROUS: Remove ALL images
-docker rmi $(docker images -q)
-```
-
-
