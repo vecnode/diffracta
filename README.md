@@ -35,3 +35,55 @@ dotnet run --project src/App/Diffracta.csproj
 (A) : Auto-referenced package.
 ```
 
+### Build/Run Docker on Windows 11/WSL
+
+```sh
+# Enable WSL2 and Virtual Machine Platform (recommended)
+# If Docker Desktop does not detect a Hypervisor and stops running,
+# Run PowerShell as Administrator:
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+# Enable Virtual Machine Platform (required for WSL2)
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+# Set WSL2 as default
+wsl --set-default-version 2
+# Restart your computer
+Restart-Computer
+```
+
+```sh
+# Build the image and launch the app
+# 1) Build the image
+docker build -t diffracta:latest .
+# 5) Run the container (prefer host.docker.internal; fall back to host IP)
+docker run --rm -e DISPLAY='host.docker.internal:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
+
+```
+
+```sh
+# Docker Utils
+# List all Docker images
+docker images
+# Or shorter version
+docker image ls
+# List all running containers
+docker ps
+# List ALL containers (running and stopped)
+docker ps -a
+# Or shorter version
+docker container ls -a
+
+# Remove a specific image
+docker rmi diffracta:latest
+# Remove by image ID
+docker rmi <IMAGE_ID>
+# Force remove (even if in use - use with caution!)
+docker rmi -f diffracta:latest
+# Remove all unused images
+docker image prune
+# Remove ALL unused images (not just dangling)
+docker image prune -a
+# DANGEROUS: Remove ALL images
+docker rmi $(docker images -q)
+```
+
+

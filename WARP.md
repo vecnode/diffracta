@@ -76,3 +76,38 @@ Copy-Item src/App/Shaders/001_organic_noise.glsl $Out
 $Base = "src/App/bin/Debug/net8.0"
 Copy-Item -Recurse src/App/Shaders/postprocess "$Base/Shaders/" -Force
 ```
+
+## Docker (Windows with X11 forwarding)
+
+- Build and run with VcXsrv (complete workflow)
+```pwsh path=null start=null
+# 1) Build the image
+docker build -t diffracta:latest .
+
+# 2) Ensure VcXsrv is installed
+$vcxsrv = (Get-Command vcxsrv.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
+if (-not $vcxsrv) { $vcxsrv = Get-ChildItem C:\Progra~1, C:\Progra~2 -Recurse -Filter vcxsrv.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
+if (-not $vcxsrv) {
+  winget install --id=VcXsrv.VcXsrv -e --silent 2>$null
+  if ($LASTEXITCODE -ne 0) { winget install --id=marha.VcXsrv -e --silent }
+  $vcxsrv = (Get-Command vcxsrv.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
+  if (-not $vcxsrv) { $vcxsrv = Get-ChildItem C:\Progra~1, C:\Progra~2 -Recurse -Filter vcxsrv.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
+}
+
+# 3) Start X server (enable TCP, allow public access)
+if ($vcxsrv) {
+  Start-Process -FilePath $vcxsrv -ArgumentList ':0 -multiwindow -ac -clipboard -listen tcp -nowgl' -ErrorAction SilentlyContinue | Out-Null
+} else {
+  throw "No X server found. Install VcXsrv."
+}
+
+# 4) Wait for X to listen on :0 (TCP 6000)
+$deadline = (Get-Date).AddSeconds(8)
+do {
+  Start-Sleep -Milliseconds 300
+  $ok = (Test-NetConnection -ComputerName 'localhost' -Port 6000 -WarningAction SilentlyContinue).TcpTestSucceeded
+} until ($ok -or (Get-Date) -gt $deadline)
+
+# 5) Run the container
+docker run --rm -e DISPLAY='host.docker.internal:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
+```

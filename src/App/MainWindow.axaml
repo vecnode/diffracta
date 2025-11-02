@@ -66,6 +66,43 @@
       <Setter Property="Foreground" Value="Black"/>
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
+    
+    <!-- MenuItem styling - white text -->
+    <Style Selector="MenuItem">
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- MenuItem popup background (dropdowns) -->
+    <Style Selector="MenuItem > Popup > Border">
+      <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- ComboBox styling -->
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="#2d2d2d"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- ComboBox dropdown popup background -->
+    <Style Selector="ComboBox /template/ Popup > Border">
+      <Setter Property="Background" Value="#2d2d2d"/>
+      <Setter Property="BorderBrush" Value="#555555"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    
+    <!-- ComboBox items -->
+    <Style Selector="ComboBoxItem">
+      <Setter Property="Background" Value="#2d2d2d"/>
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#3d3d3d"/>
+    </Style>
+    
+    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="#4d4d4d"/>
+    </Style>
   </Window.Styles>
   
   <Grid Background="#1e1e1e">
