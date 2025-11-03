@@ -252,15 +252,53 @@
                         
                         <!-- MIDI Devices Box -->
                         <Border BorderBrush="Black" BorderThickness="1" Padding="4">
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="6">
                                 <TextBlock Text="MIDI Devices" Foreground="White" FontSize="14"/>
                                 <ListBox x:Name="MidiDevicesList"
-                                         Height="120"
+                                         Height="100"
                                          Background="DarkGray"
-                                         Foreground="White"
-                                         BorderBrush="Gray"
+                                         Foreground="Black"
+                                         BorderBrush="Black"
                                          BorderThickness="1"
-                                         CornerRadius="4"/>
+                                         CornerRadius="0">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem">
+                                            <Setter Property="Height" Value="20"/>
+                                            <Setter Property="Padding" Value="4,0"/>
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Left"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="Incoming MIDI" Foreground="White" FontSize="14"/>
+                                <ListBox x:Name="MidiInEventsList"
+                                         Height="100"
+                                         Background="DarkGray"
+                                         Foreground="Black"
+                                         BorderBrush="Black"
+                                         BorderThickness="1"
+                                         CornerRadius="0">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem">
+                                            <Setter Property="Height" Value="20"/>
+                                            <Setter Property="Padding" Value="4,0"/>
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Left"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                             </StackPanel>
                         </Border>
                         

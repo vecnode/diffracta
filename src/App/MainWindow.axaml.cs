@@ -9,7 +9,10 @@ using System.Linq;
 using System.Text;
 using System.ComponentModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
 using Melanchall.DryWetMidi.Multimedia;
+using Melanchall.DryWetMidi.Core;
 
 namespace Diffracta;
 
@@ -22,6 +25,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private DispatcherTimer? _tempoTimer;
     private bool _isTempoRunning = false;
     private bool _isLogPanelVisible = false;
+
+    // MIDI state
+    private InputDevice? _activeMidiDevice;
+    private readonly ObservableCollection<string> _midiInEvents = new();
     
     // Slider state management
     private readonly bool[] _slotActiveStates = new bool[3];
@@ -47,6 +54,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             SetupWatcher();
             UpdateTabContent();
             LogMessage("Ready - Select a shader from the dropdown");
+
+            // Wire MIDI UI when available
+            var midiInList = this.FindControl<ListBox>("MidiInEventsList");
+            if (midiInList != null) midiInList.ItemsSource = _midiInEvents;
+            var midiList = this.FindControl<ListBox>("MidiDevicesList");
+            if (midiList != null) midiList.SelectionChanged += OnMidiDeviceSelected;
             
             // Initialize with controls page
             SwitchToPage(1);
@@ -388,6 +401,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 else
                 {
                     midiList.ItemsSource = names.OrderBy(n => n).ToList();
+                    // auto-select first if none selected
+                    if (midiList.SelectedIndex < 0)
+                        midiList.SelectedIndex = 0;
                 }
             }
             catch (Exception ex)
@@ -702,6 +718,117 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
     }
 
+    private void OnMidiDeviceSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        var list = sender as ListBox;
+        var name = list?.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(name) || name == "None") return;
+        TryOpenMidiDevice(name);
+    }
+
+    private void TryOpenMidiDevice(string name)
+    {
+        try
+        {
+            // Close previous
+            if (_activeMidiDevice != null)
+            {
+                _activeMidiDevice.EventReceived -= OnMidiEventReceived;
+                if (_activeMidiDevice.IsListeningForEvents) _activeMidiDevice.StopEventsListening();
+                _activeMidiDevice.Dispose();
+                _activeMidiDevice = null;
+            }
+
+            var dev = InputDevice.GetByName(name);
+            if (dev == null)
+            {
+                _midiInEvents.Clear();
+                _midiInEvents.Add($"Device not found: {name}");
+                return;
+            }
+
+            _midiInEvents.Clear();
+            _midiInEvents.Add($"Opened: {name}");
+            dev.EventReceived += OnMidiEventReceived;
+            dev.StartEventsListening();
+            _activeMidiDevice = dev;
+        }
+        catch (Exception ex)
+        {
+            _midiInEvents.Add($"Error opening device: {ex.Message}");
+        }
+    }
+
+    private void OnMidiEventReceived(object? sender, MidiEventReceivedEventArgs e)
+    {
+        try
+        {
+            // Filter noisy real-time messages
+            if (e.Event is SystemRealTimeEvent)
+                return;
+
+            string msg = FormatMidiEvent(e.Event);
+            
+            // Add to UI list, fail silently if too fast
+            Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    _midiInEvents.Add(msg);
+                    
+                    // Keep only last 50 messages
+                    while (_midiInEvents.Count > 50)
+                        _midiInEvents.RemoveAt(0);
+                    
+                    // Auto-scroll to bottom
+                    var midiInList = this.FindControl<ListBox>("MidiInEventsList");
+                    if (midiInList != null && _midiInEvents.Count > 0)
+                    {
+                        midiInList.SelectedIndex = _midiInEvents.Count - 1;
+                        if (midiInList.SelectedItem != null)
+                            midiInList.ScrollIntoView(midiInList.SelectedItem);
+                    }
+                }
+                catch
+                {
+                    // If UI update fails, just skip this message
+                }
+            }, DispatcherPriority.Background);
+        }
+        catch
+        {
+            // Swallow exceptions from MIDI thread
+        }
+    }
+
+    private static string FormatMidiEvent(Melanchall.DryWetMidi.Core.MidiEvent ev)
+    {
+        string ts = DateTime.Now.ToString("HH:mm:ss.fff");
+        if (ev is NoteOnEvent no)
+        {
+            return $"[{ts}] NoteOn ch {(int)no.Channel + 1} note {no.NoteNumber} vel {no.Velocity}";
+        }
+        if (ev is NoteOffEvent nf)
+        {
+            return $"[{ts}] NoteOff ch {(int)nf.Channel + 1} note {nf.NoteNumber} vel {nf.Velocity}";
+        }
+        if (ev is ControlChangeEvent cc)
+        {
+            return $"[{ts}] CC ch {(int)cc.Channel + 1} ctrl {(int)cc.ControlNumber} val {cc.ControlValue}";
+        }
+        if (ev is PitchBendEvent pb)
+        {
+            return $"[{ts}] PitchBend ch {(int)pb.Channel + 1} val {pb.PitchValue}";
+        }
+        if (ev is ProgramChangeEvent pc)
+        {
+            return $"[{ts}] Program ch {(int)pc.Channel + 1} prog {(int)pc.ProgramNumber}";
+        }
+        if (ev is ChannelAftertouchEvent ca)
+        {
+            return $"[{ts}] Aftertouch ch {(int)ca.Channel + 1} val {ca.AftertouchValue}";
+        }
+        // Fallback
+        return $"[{ts}] {ev.GetType().Name}";
+    }
 }
-
-
