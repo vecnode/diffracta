@@ -8,9 +8,9 @@ using FFMpegCore;
 
 namespace Diffracta;
 
-public partial class HelpPage : UserControl
+public partial class Page4 : UserControl
 {
-    public HelpPage()
+    public Page4()
     {
         InitializeComponent();
 

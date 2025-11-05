@@ -25,6 +25,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private DispatcherTimer? _tempoTimer;
     private bool _isTempoRunning = false;
     private bool _isLogPanelVisible = false;
+    private ChildWindow? _childWindow;
 
     // MIDI state
     private InputDevice? _activeMidiDevice;
@@ -96,6 +97,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Page3Button.Click += (_, __) => SwitchToPage(3);
         Page4Button.Click += (_, __) => SwitchToPage(4);
 
+        // Child window menu item
+        ChildWindowMenuItem.Click += (_, __) => OpenChildWindow();
+
         // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
             if (e.Key == Avalonia.Input.Key.Escape && _isPerformanceMode)
@@ -105,7 +109,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
     }
 
-    private void PopulatePicker(LivePage? page = null) {
+    private void PopulatePicker(Page1? page = null) {
         var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
             .OrderBy(p => Path.GetFileName(p))
             .Select(p => Path.GetFileName(p))
@@ -136,7 +140,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void RefreshCurrentPage()
     {
         // Refresh the current page (typically the controls page)
-        if (PageContentControl.Content is LivePage controlsPage)
+        if (PageContentControl.Content is Page1 controlsPage)
         {
             PopulatePicker(controlsPage);
         }
@@ -274,8 +278,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             _slotValues[slot] = (float)value; // Store value
             LogMessage($"Slot {slot + 1} value changed to {value:F2}");
             
-            // Update the UI text block to show the current value from LivePage
-            if (PageContentControl.Content is LivePage controlsPage)
+            // Update the UI text block to show the current value from Page1
+            if (PageContentControl.Content is Page1 controlsPage)
             {
                 string textBlockName = $"Slot{slot + 1}Value";
                 var textBlock = controlsPage.FindControl<TextBlock>(textBlockName);
@@ -364,7 +368,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void UpdateTabContent()
     {
         // Update Info tab - get current shader from the controls page
-        if (PageContentControl.Content is LivePage controlsPage)
+        if (PageContentControl.Content is Page1 controlsPage)
         {
             var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
             var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
@@ -491,7 +495,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 LogMessage($"Import complete: {successCount} files imported, {errorCount} errors");
                 
                 // Refresh the current controls page if it exists
-                if (PageContentControl.Content is LivePage controlsPage)
+                if (PageContentControl.Content is Page1 controlsPage)
                 {
                     PopulatePicker(controlsPage);
                 }
@@ -518,32 +522,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         switch (pageNumber)
         {
             case 1:
-                var controlsPage = new LivePage();
+                var controlsPage = new Page1();
                 PageContentControl.Content = controlsPage;
                 WireUpLivePage(controlsPage);
                 PopulatePicker(controlsPage);
                 LogMessage("Switched to Controls page");
                 break;
             case 2:
-                var toolsPage = new ToolsPage();
+                var toolsPage = new Page2();
                 PageContentControl.Content = toolsPage;
                 toolsPage.SetParentWindow(this);
                 LogMessage("Switched to Tools page");
                 break;
             case 3:
-                var settingsPage = new SettingsPage();
+                var settingsPage = new Page3();
                 PageContentControl.Content = settingsPage;
                 settingsPage.SetParentWindow(this);
                 LogMessage("Switched to Settings page");
                 break;
             case 4:
-                PageContentControl.Content = new HelpPage();
+                PageContentControl.Content = new Page4();
                 LogMessage("Switched to Help page");
                 break;
         }
     }
 
-    private void WireUpLivePage(LivePage page)
+    private void WireUpLivePage(Page1 page)
     {
         // Find controls and wire up events
         var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
@@ -597,7 +601,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (slot3Slider != null) slot3Slider.ValueChanged += OnSlot3ValueChanged;
     }
     
-    private void WireUpToolsPage(ToolsPage page)
+    private void WireUpToolsPage(Page2 page)
     {
         var browseButton = page.FindControl<Button>("BrowseButton");
         var directoryListBox = page.FindControl<ListBox>("DirectoryListBox");
@@ -830,5 +834,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
         // Fallback
         return $"[{ts}] {ev.GetType().Name}";
+    }
+
+    private void OpenChildWindow()
+    {
+        // If window already exists and is open, bring it to front
+        if (_childWindow != null && _childWindow.IsVisible)
+        {
+            _childWindow.Activate();
+            return;
+        }
+
+        // Create new child window if it doesn't exist or was closed
+        if (_childWindow == null || !_childWindow.IsVisible)
+        {
+            _childWindow = new ChildWindow();
+            
+            // Share the tempo object for real-time data binding
+            _childWindow.SetSharedTempo(_globalTempoNumber);
+            
+            // Handle window closing to clean up
+            _childWindow.Closed += (_, __) =>
+            {
+                // Note: Don't set _childWindow to null here since we might want to reuse it
+                LogMessage("Child window closed");
+            };
+            
+            // Show the window (non-modal, floating)
+            _childWindow.Show(this);
+            LogMessage("Child window opened");
+        }
     }
 }

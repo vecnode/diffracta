@@ -19,10 +19,6 @@ dotnet run --project src/App/Diffracta.csproj
 
 ### Requirements
 
-- .NET 8.0 SDK or later
-- OpenGL 3.3 compatible graphics driver
-- Windows 11 (tested)
-
 ```
 [net8.0]: 
 Packages in use:

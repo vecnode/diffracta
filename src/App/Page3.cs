@@ -2,11 +2,11 @@ using Avalonia.Controls;
 
 namespace Diffracta;
 
-public partial class SettingsPage : UserControl
+public partial class Page3 : UserControl
 {
     private MainWindow? _parentWindow;
     
-    public SettingsPage()
+    public Page3()
     {
         InitializeComponent();
     }

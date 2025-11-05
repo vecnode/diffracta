@@ -4,11 +4,11 @@ using System;
 
 namespace Diffracta;
 
-public partial class ToolsPage : UserControl
+public partial class Page2 : UserControl
 {
     private MainWindow? _parentWindow;
     
-    public ToolsPage()
+    public Page2()
     {
         InitializeComponent();
     }

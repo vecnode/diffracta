@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Diffracta;
 
-public partial class LivePage : UserControl
+public partial class Page1 : UserControl
 {
-    public LivePage()
+    public Page1()
     {
         InitializeComponent();
     }

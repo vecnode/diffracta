@@ -66,28 +66,37 @@
       <Setter Property="Foreground" Value="Black"/>
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
-    
-    <!-- MenuItem styling - white text, grey background -->
-    <Style Selector="MenuItem">
-      <Setter Property="Foreground" Value="White"/>
-      <Setter Property="Background" Value="#2d2d2d"/>
-    </Style>
-    
-    <!-- MenuItem popup dropdown background -->
-    <Style Selector="MenuItem > Popup > Border">
+
+    <Style Selector="Menu">
+        <Setter Property="Height" Value="26"/>
         <Setter Property="Background" Value="#2d2d2d"/>
-        <Setter Property="BorderBrush" Value="#2d2d2d"/>
     </Style>
+    
+    
 
     <Style Selector="MenuItem">
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="Background" Value="#2d2d2d"/>
         <Setter Property="BorderBrush" Value="#2d2d2d"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
     
-    <!-- MenuItem hover - keep white text -->
+    <!-- MenuItem hover - keep white text, grey background -->
     <Style Selector="MenuItem:pointerover">
       <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Background" Value="#3d3d3d"/>
+    </Style>
+    
+    <!-- MenuItem popup/dropdown container - grey background -->
+    <Style Selector="MenuItem > Popup > Border">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="BorderBrush" Value="#2d2d2d"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    
+    <!-- Menu panel container - grey background -->
+    <Style Selector="Menu > Panel">
+        <Setter Property="Background" Value="#2d2d2d"/>
     </Style>
     
     <!-- ComboBox styling - grey background, white text -->
@@ -101,6 +110,18 @@
       <Setter Property="Background" Value="#2d2d2d"/>
       <Setter Property="Foreground" Value="White"/>
     </Style>
+    
+    <!-- TabItem styling - reduce header height and remove underline -->
+    <Style Selector="TabItem">
+      <Setter Property="MinHeight" Value="26"/>
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <!-- Remove underline from selected tab -->
+    <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+        <Setter Property="IsVisible" Value="false"/>
+    </Style>
+
   </Window.Styles>
   
   <Grid Background="#1e1e1e">
@@ -126,6 +147,8 @@
         </MenuItem>
         <MenuItem Header="_View">
             <MenuItem Header="Toggle Performance Mode" />
+            <Separator />
+            <MenuItem Header="_Child Window" x:Name="ChildWindowMenuItem" />
         </MenuItem>
         <MenuItem Header="_Help">
             <MenuItem Header="_About" />
@@ -138,7 +161,7 @@
       <Button x:Name="PerformanceButton" Content="Performance" Margin="0,0,0,0" />
       <Button x:Name="LogsButton" Content="Logs" Margin="0,0,0,0" />
     </StackPanel>
-
+    
     
     <!-- Simple Sidebar -->
     <Border x:Name="LeftSidebar" Grid.Row="2" Grid.RowSpan="2" Grid.Column="0" 

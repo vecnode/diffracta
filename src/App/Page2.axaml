@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Diffracta"
-             x:Class="Diffracta.ToolsPage">
+             x:Class="Diffracta.Page2">
     <ScrollViewer Margin="8">
         <StackPanel Spacing="12">
             <TextBlock Text="Master Post-Process VFX" Foreground="White" FontSize="14"/>
