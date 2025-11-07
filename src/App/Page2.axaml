@@ -111,6 +111,41 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
+
+            <!-- Browse Directory -->
+            <StackPanel Spacing="8" Margin="0,16,0,0">
+                <Button x:Name="BrowseButton" 
+                        Content="Browse Directory" 
+                        Width="150" 
+                        Height="30"
+                        Background="DarkGray"
+                        Foreground="White"
+                        BorderThickness="0"
+                        CornerRadius="4"/>
+                
+                <ListBox x:Name="DirectoryListBox" 
+                        Width="NaN" 
+                        Height="200"
+                        Background="DarkGray"
+                        Foreground="White"
+                        BorderBrush="Gray"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Margin="0,8,0,0"/>
+            </StackPanel>
+            
+            <!-- Import Shader File -->
+            <StackPanel Spacing="8" Margin="0,16,0,0">
+                <TextBlock Text="Import Shader File" Foreground="White" FontSize="14"/>
+                <Button x:Name="LoadShaderButton" 
+                        Content="Open" 
+                        Width="200" 
+                        Height="30"
+                        Background="#d3d3d3"
+                        Foreground="Black"
+                        BorderThickness="1"
+                        CornerRadius="4"/>
+            </StackPanel>
             
             
         </StackPanel>

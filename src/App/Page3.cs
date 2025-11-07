@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using System;
 
 namespace Diffracta;
 
@@ -8,27 +9,59 @@ public partial class Page3 : UserControl
     
     public Page3()
     {
-        InitializeComponent();
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("Page3: Constructor called");
+            InitializeComponent();
+            System.Diagnostics.Debug.WriteLine("Page3: InitializeComponent completed");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Page3 Constructor error: {ex.Message}\n{ex.StackTrace}");
+            Console.WriteLine($"Page3 Constructor error: {ex.Message}");
+            throw; // Re-throw to see the actual error
+        }
     }
     
     public void SetParentWindow(MainWindow parent)
     {
-        _parentWindow = parent;
-        WireUpControls();
+        try
+        {
+            _parentWindow = parent;
+            WireUpControls();
+            System.Diagnostics.Debug.WriteLine("Page3: SetParentWindow completed");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Page3 SetParentWindow error: {ex.Message}\n{ex.StackTrace}");
+            Console.WriteLine($"Page3 SetParentWindow error: {ex.Message}");
+        }
     }
     
     private void WireUpControls()
     {
-        // Wire up Load Shader button
-        var loadShaderButton = this.FindControl<Button>("LoadShaderButton");
-        if (loadShaderButton != null)
+        try
         {
-            loadShaderButton.Click += async (_, __) => {
-                if (_parentWindow != null)
-                {
-                    await _parentWindow.LoadShaderFiles();
-                }
-            };
+            // Wire up Load Shader button
+            var loadShaderButton = this.FindControl<Button>("LoadShaderButton");
+            if (loadShaderButton != null)
+            {
+                loadShaderButton.Click += async (_, __) => {
+                    if (_parentWindow != null)
+                    {
+                        await _parentWindow.LoadShaderFiles();
+                    }
+                };
+            }
+            
+            // Check if TimelineEditor exists
+            var timelineEditor = this.FindControl<TimelineControl.TimelineEditor>("TimelineEditorControl");
+            System.Diagnostics.Debug.WriteLine($"Page3: TimelineEditor found = {timelineEditor != null}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Page3 WireUpControls error: {ex.Message}\n{ex.StackTrace}");
+            Console.WriteLine($"Page3 WireUpControls error: {ex.Message}");
         }
     }
 }

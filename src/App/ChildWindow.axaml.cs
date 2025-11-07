@@ -6,7 +6,7 @@ namespace Diffracta;
 
 public partial class ChildWindow : Window, INotifyPropertyChanged
 {
-    private string _sharedMessage = "This data is shared with the main window in real-time!";
+    private string _sharedMessage = "Data is shared with the main window in real-time";
     private MainTempo? _sharedTempo;
 
     /// <summary>
