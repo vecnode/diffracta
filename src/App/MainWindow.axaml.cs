@@ -35,6 +35,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private readonly bool[] _slotActiveStates = new bool[3];
     private readonly float[] _slotValues = new float[3];
     
+    // Directory browsing state
+    private string _currentDirectoryPath = string.Empty;
+    private readonly List<string> _fullDirectoryItems = new();
+    
     
     public new event PropertyChangedEventHandler? PropertyChanged;
 
@@ -532,6 +536,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 var toolsPage = new Page2();
                 PageContentControl.Content = toolsPage;
                 toolsPage.SetParentWindow(this);
+                WireUpToolsPage(toolsPage);
                 LogMessage("Switched to Tools page");
                 break;
             case 3:
@@ -604,54 +609,162 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void WireUpToolsPage(Page2 page)
     {
         var browseButton = page.FindControl<Button>("BrowseButton");
+        var upButton = page.FindControl<Button>("UpButton");
         var directoryListBox = page.FindControl<ListBox>("DirectoryListBox");
+        var directoryPathTextBox = page.FindControl<TextBox>("DirectoryPathTextBox");
         
         if (browseButton != null && directoryListBox != null)
         {
-            browseButton.Click += async (_, __) => await BrowseDirectory(directoryListBox);
+            browseButton.Click += (_, __) => BrowseDirectory(directoryListBox, directoryPathTextBox);
+        }
+        
+        if (upButton != null && directoryListBox != null && directoryPathTextBox != null)
+        {
+            upButton.Click += (_, __) =>
+            {
+                var currentPath = directoryPathTextBox.Text?.Trim() ?? string.Empty;
+                
+                if (string.IsNullOrWhiteSpace(currentPath))
+                {
+                    LogMessage("No directory path to navigate from");
+                    return;
+                }
+                
+                if (!Directory.Exists(currentPath))
+                {
+                    LogMessage($"Current path does not exist: {currentPath}");
+                    return;
+                }
+                
+                // Get parent directory
+                var parentPath = Directory.GetParent(currentPath)?.FullName;
+                
+                if (string.IsNullOrEmpty(parentPath))
+                {
+                    LogMessage("Already at root directory");
+                    return;
+                }
+                
+                // Update TextBox with parent path
+                directoryPathTextBox.Text = parentPath;
+                
+                // Load parent directory contents
+                LoadDirectoryContents(parentPath, directoryListBox);
+                
+                LogMessage($"Navigated to parent: {parentPath}");
+            };
+        }
+        
+        // Handle folder navigation when clicking on a directory item
+        if (directoryListBox != null && directoryPathTextBox != null)
+        {
+            directoryListBox.DoubleTapped += (_, e) =>
+            {
+                var selectedItem = directoryListBox.SelectedItem as string;
+                if (selectedItem != null && selectedItem.StartsWith("[DIR]"))
+                {
+                    // Extract folder name (remove the [DIR] prefix and space)
+                    var folderName = selectedItem.Substring(5).Trim();
+                    
+                    // Build new path
+                    var newPath = Path.Combine(_currentDirectoryPath, folderName);
+                    
+                    // Update TextBox
+                    directoryPathTextBox.Text = newPath;
+                    
+                    // Load directory contents
+                    LoadDirectoryContents(newPath, directoryListBox);
+                    
+                    LogMessage($"Navigated to: {newPath}");
+                }
+            };
+        }
+        
+        if (directoryPathTextBox != null && directoryListBox != null)
+        {
+            directoryPathTextBox.TextChanged += (_, __) => 
+            {
+                var text = directoryPathTextBox.Text ?? string.Empty;
+                
+                // Check if the text is a valid directory path
+                if (!string.IsNullOrWhiteSpace(text) && Directory.Exists(text))
+                {
+                    // If it's a valid directory and different from current, load it
+                    if (text != _currentDirectoryPath)
+                    {
+                        LoadDirectoryContents(text, directoryListBox);
+                    }
+                    else
+                    {
+                        // Same directory, show all items (no filter)
+                        FilterDirectoryList(directoryListBox, string.Empty);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(_currentDirectoryPath) && Directory.Exists(_currentDirectoryPath))
+                {
+                    // We have a loaded directory, extract filter text
+                    // If text starts with the current directory path, extract the part after it
+                    string filterText = text;
+                    if (text.StartsWith(_currentDirectoryPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var remaining = text.Substring(_currentDirectoryPath.Length).TrimStart('\\', '/');
+                        filterText = remaining;
+                    }
+                    
+                    // Filter the items based on the extracted filter text
+                    FilterDirectoryList(directoryListBox, filterText);
+                }
+                else
+                {
+                    // No valid directory, clear the list
+                    directoryListBox.Items.Clear();
+                }
+            };
         }
     }
 
 
-    private async Task BrowseDirectory(ListBox directoryListBox)
+    private void BrowseDirectory(ListBox directoryListBox, TextBox? directoryPathTextBox)
     {
         try
         {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider is not { } storageProvider)
+            // Get path from TextBox
+            var folderPath = directoryPathTextBox?.Text?.Trim() ?? string.Empty;
+            
+            LogMessage($"Browse button clicked. Path from TextBox: '{folderPath}'");
+            
+            if (string.IsNullOrWhiteSpace(folderPath))
             {
-                LogMessage("Unable to access file system - storage provider not available");
+                LogMessage("Please enter a directory path in the text box");
                 return;
             }
-
-            // Configure folder picker options
-            var folderPickerOptions = new FolderPickerOpenOptions
+            
+            if (directoryListBox == null)
             {
-                Title = "Select Directory",
-                AllowMultiple = false
-            };
-
-            LogMessage("Opening folder dialog...");
-            var folders = await storageProvider.OpenFolderPickerAsync(folderPickerOptions);
-
-            if (folders.Count > 0)
-            {
-                var selectedFolder = folders[0];
-                var folderPath = selectedFolder.Path.LocalPath;
-                
-                // Load directory contents
-                LoadDirectoryContents(folderPath, directoryListBox);
-                
-                LogMessage($"Selected directory: {folderPath}");
+                LogMessage("DirectoryListBox is null!");
+                return;
             }
-            else
+            
+            if (!Directory.Exists(folderPath))
             {
-                LogMessage("No directory selected");
+                LogMessage($"Directory does not exist: {folderPath}");
+                return;
             }
+            
+            LogMessage($"Directory exists. Loading contents...");
+            
+            // Load directory contents
+            LoadDirectoryContents(folderPath, directoryListBox);
+            
+            // Make ListBox visible
+            directoryListBox.IsVisible = true;
+            
+            LogMessage($"Loaded directory: {folderPath}");
         }
         catch (Exception ex)
         {
             LogMessage($"Error browsing directory: {ex.Message}");
+            LogMessage($"Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -661,6 +774,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             // Clear existing items
             directoryListBox.Items.Clear();
+            _fullDirectoryItems.Clear();
+            _currentDirectoryPath = directoryPath;
             
             if (!Directory.Exists(directoryPath))
             {
@@ -672,26 +787,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             var directories = Directory.GetDirectories(directoryPath)
                 .Select(Path.GetFileName)
                 .OrderBy(name => name)
-                .Select(name => $"📁 {name}")
+                .Select(name => $"[DIR] {name}")
                 .ToList();
 
             // Get files
             var files = Directory.GetFiles(directoryPath)
                 .Select(Path.GetFileName)
                 .Where(name => !string.IsNullOrEmpty(name))
+                .Select(name => name!)
                 .OrderBy(name => name)
-                .Select(name => GetFileIcon(name ?? "") + " " + name)
                 .ToList();
 
-            // Add directories first, then files
-            foreach (var dir in directories)
+            // Store full list
+            _fullDirectoryItems.AddRange(directories);
+            _fullDirectoryItems.AddRange(files);
+
+            // Add all items to list box
+            foreach (var item in _fullDirectoryItems)
             {
-                directoryListBox.Items.Add(dir);
-            }
-            
-            foreach (var file in files)
-            {
-                directoryListBox.Items.Add(file);
+                directoryListBox.Items.Add(item);
             }
 
             LogMessage($"Loaded {directories.Count} directories and {files.Count} files");
@@ -699,6 +813,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         catch (Exception ex)
         {
             LogMessage($"Error loading directory contents: {ex.Message}");
+        }
+    }
+    
+    private void FilterDirectoryList(ListBox directoryListBox, string filterText)
+    {
+        try
+        {
+            directoryListBox.Items.Clear();
+            
+            if (string.IsNullOrWhiteSpace(filterText))
+            {
+                // Show all items if filter is empty
+                foreach (var item in _fullDirectoryItems)
+                {
+                    directoryListBox.Items.Add(item);
+                }
+            }
+            else
+            {
+                // Filter items based on search text (case-insensitive)
+                var filteredItems = _fullDirectoryItems
+                    .Where(item => item.Contains(filterText, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                
+                foreach (var item in filteredItems)
+                {
+                    directoryListBox.Items.Add(item);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Error filtering directory list: {ex.Message}");
         }
     }
 
