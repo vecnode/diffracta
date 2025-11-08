@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  
+  <!-- Simple Horizontal Slider Style -->
+  <Style Selector="Slider:horizontal">
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="Background" Value="DarkGray"/>
+    <Setter Property="BorderBrush" Value="Pink"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Margin" Value="0"/>
+    
+    <Style Selector="^ Track">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,-9,0,0"/>
+      <Style Selector="^ RepeatButton Border">
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0"/>
+      </Style>
+    </Style>
+                      
+    <Style Selector="^ Thumb">
+      <Setter Property="Theme" Value="{StaticResource SquareThumbTheme}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Style>
+
+</Styles>
+
+

@@ -17,13 +17,15 @@
                   BorderThickness="1"
                   CornerRadius="0"
                   Width="18"
-                  Height="12"/>
+                  Height="32"/>
         </ControlTemplate>
       </Setter>
     </ControlTheme>
   </Window.Resources>
   
   <Window.Styles>
+    <StyleInclude Source="avares://Diffracta/Utils_Slider.axaml"/>
+    
     <Style Selector="TextBox#LogTextBox">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="White"/>
@@ -31,34 +33,7 @@
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="Cursor" Value="Arrow"/>
     </Style>
-
-    <!-- Simple Horizontal Slider Style -->
-    <Style Selector="Slider:horizontal">
-      <Setter Property="MinWidth" Value="40" />
-      <Setter Property="Height" Value="40" />
-      <Setter Property="Foreground" Value="White"/>
-      <Setter Property="Background" Value="#333333" />
-      <Setter Property="HorizontalAlignment" Value="Left"/>
-      
-      
-
-      
-      <Style Selector="^ Track">
-        <Style Selector="^ RepeatButton Border">
-          <Setter Property="CornerRadius" Value="0"/>
-          <Setter Property="Height" Value="15"/>
-          <Setter Property="BorderBrush" Value="#000000" />
-          <Setter Property="BorderThickness" Value="1" />
-        </Style>
-      </Style>
-                      
-      <Style Selector="^ Thumb">
-        <Setter Property="Theme" Value="{StaticResource SquareThumbTheme}"/>
-      </Style>
-    </Style>
     
-
-
     
     <!-- Button styling - light grey background with black text -->
     <Style Selector="Button">

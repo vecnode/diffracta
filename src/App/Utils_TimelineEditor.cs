@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using Avalonia.Threading;
 
 
 
@@ -43,6 +44,8 @@ namespace TimelineControl
         public ObservableCollection<TimelineTrack> Tracks { get => GetValue(TracksProperty); set => SetValue(TracksProperty, value); }
 
         private int _trackCounter = 0; // Global variable to track track numbers
+        private DispatcherTimer? _playbackTimer;
+        private bool _isPlaying = false;
 
         public Utils_TimelineEditor()
         {
@@ -194,6 +197,111 @@ namespace TimelineControl
             {
                 System.Diagnostics.Debug.WriteLine($"OnAddTrackClick error: {ex.Message}");
             }
+        }
+
+        public void OnRemoveTrack(TimelineTrack track)
+        {
+            try
+            {
+                if (Tracks != null && Tracks.Contains(track))
+                {
+                    Tracks.Remove(track);
+                    
+                    // Renumber remaining tracks to maintain sequential naming
+                    if (Tracks.Count > 0)
+                    {
+                        _trackCounter = 0; // Reset counter
+                        foreach (var remainingTrack in Tracks)
+                        {
+                            _trackCounter++;
+                            string trackName = _trackCounter == 1 ? "Video" : $"Video {_trackCounter}";
+                            remainingTrack.Name = trackName;
+                        }
+                    }
+                    else
+                    {
+                        _trackCounter = 0; // Reset to 0 if no tracks remain
+                    }
+                    
+                    // Force immediate visual update
+                    var canvas = this.FindControl<TimelineCanvas>("PART_Canvas");
+                    if (canvas != null)
+                    {
+                        canvas.InvalidateMeasure();
+                        canvas.InvalidateVisual();
+                    }
+                    
+                    var trackHead = this.FindControl<TimelineTrackHead>("PART_TrackHead");
+                    if (trackHead != null)
+                    {
+                        trackHead.InvalidateMeasure();
+                        trackHead.InvalidateArrange();
+                        trackHead.InvalidateVisual();
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"OnRemoveTrack: Removed track, remaining count: {Tracks.Count}, counter: {_trackCounter}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OnRemoveTrack error: {ex.Message}");
+            }
+        }
+
+        private void OnPlayClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (_isPlaying) return; // Already playing
+            
+            _isPlaying = true;
+            
+            // Stop at end of timeline
+            if (CursorTime >= Duration.TotalSeconds)
+            {
+                CursorTime = 0; // Reset to beginning if at end
+            }
+            
+            _playbackTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1) // Update every 1 second
+            };
+            
+            _playbackTimer.Tick += (s, args) =>
+            {
+                CursorTime += 1.0; // Advance by 1 second
+                
+                // Stop when reaching the end
+                if (CursorTime >= Duration.TotalSeconds)
+                {
+                    CursorTime = Duration.TotalSeconds;
+                    StopPlayback();
+                }
+            };
+            
+            _playbackTimer.Start();
+        }
+
+        private void OnStopClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            StopPlayback();
+        }
+
+        private void OnBeginningClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            StopPlayback();
+            CursorTime = 0;
+        }
+
+        private void OnEndClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            StopPlayback();
+            CursorTime = Duration.TotalSeconds;
+        }
+
+        private void StopPlayback()
+        {
+            _isPlaying = false;
+            _playbackTimer?.Stop();
+            _playbackTimer = null;
         }
     }
 
@@ -954,31 +1062,24 @@ namespace TimelineControl
                     {
                         System.Diagnostics.Debug.WriteLine($"Creating track head for track: {track.Name}, index: {i}");
                         
-                        // Create new track head control
-                        var border = new Border
+                        // Create TextBox for track name
+                        var textBox = new TextBox
                         {
-                            Background = i % 2 == 0 ? _laneBrush : _laneAltBrush,
+                            Text = track.Name ?? "",
+                            Background = Brushes.Transparent,
+                            BorderThickness = new Thickness(1),
                             BorderBrush = Brushes.LightGray,
-                            BorderThickness = new Thickness(0.5), // 0.5px to render as 1px
-                            Child = new TextBox
-                            {
-                                Text = track.Name ?? "",
-                                Background = Brushes.Transparent,
-                                BorderThickness = new Thickness(1),
-                                BorderBrush = Brushes.LightGray,
-                                CornerRadius = new CornerRadius(0),
-                                Foreground = Brushes.Gray,
-                                FontSize = 12,
-                                Padding = new Thickness(0),
-                                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                                VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
-                            }
+                            CornerRadius = new CornerRadius(0),
+                            Foreground = Brushes.Gray,
+                            FontSize = 12,
+                            Padding = new Thickness(0),
+                            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
                         };
 
                         // Bind TextBox text to track name
-                        var textBox = (TextBox)border.Child;
                         textBox.TextChanged += (s, e) =>
                         {
                             if (textBox.Text != null)
@@ -994,6 +1095,67 @@ namespace TimelineControl
                             {
                                 textBox.Text = track.Name ?? "";
                             }
+                        };
+
+                        // Create delete button
+                        var deleteButton = new Button
+                        {
+                            Content = "X",
+                            Width = 24,
+                            Height = 24,
+                            FontSize = 12,
+                            FontWeight = Avalonia.Media.FontWeight.Bold,
+                            Background = new SolidColorBrush(Color.FromRgb(200, 50, 50)),
+                            Foreground = Brushes.White,
+                            BorderThickness = new Thickness(1),
+                            BorderBrush = Brushes.DarkRed,
+                            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                            Margin = new Thickness(4, 0, 4, 0),
+                            Padding = new Thickness(0)
+                        };
+
+                        // Wire up delete button click
+                        deleteButton.Click += (s, e) =>
+                        {
+                            // Find the parent Utils_TimelineEditor
+                            var parent = this.GetVisualParent();
+                            while (parent != null && !(parent is Utils_TimelineEditor))
+                            {
+                                parent = parent.GetVisualParent();
+                            }
+                            
+                            if (parent is Utils_TimelineEditor editor)
+                            {
+                                editor.OnRemoveTrack(track);
+                            }
+                            else
+                            {
+                                // Fallback: remove directly from collection
+                                if (Tracks != null && Tracks.Contains(track))
+                                {
+                                    Tracks.Remove(track);
+                                }
+                            }
+                        };
+
+                        // Create container Grid with TextBox and Button
+                        var container = new Grid
+                        {
+                            ColumnDefinitions = new ColumnDefinitions("*,Auto")
+                        };
+                        Grid.SetColumn(textBox, 0);
+                        Grid.SetColumn(deleteButton, 1);
+                        container.Children.Add(textBox);
+                        container.Children.Add(deleteButton);
+
+                        // Create new track head control
+                        var border = new Border
+                        {
+                            Background = i % 2 == 0 ? _laneBrush : _laneAltBrush,
+                            BorderBrush = Brushes.LightGray,
+                            BorderThickness = new Thickness(0.5), // 0.5px to render as 1px
+                            Child = container
                         };
 
                         // Ensure the border is visible and properly sized
@@ -1081,12 +1243,19 @@ namespace TimelineControl
                             // Arrange the border (same height as track)
                             border.Arrange(new Rect(0, y, finalSize.Width, track.Height));
                             
-                            // Set TextBox width to half of track head width and height based on font size
-                            if (border.Child is TextBox textBox)
+                            // Set TextBox width and height (now inside a Grid container)
+                            if (border.Child is Grid container)
                             {
-                                textBox.Width = finalSize.Width * 0.5;
-                                // Height based on font size (12) + padding for comfortable text display
-                                textBox.Height = textBox.FontSize + 8;
+                                // Find TextBox in the Grid
+                                foreach (var child in container.Children)
+                                {
+                                    if (child is TextBox textBox)
+                                    {
+                                        // TextBox takes remaining space (Grid column 0 is "*")
+                                        // Height based on font size (12) + padding for comfortable text display
+                                        textBox.Height = textBox.FontSize + 8;
+                                    }
+                                }
                             }
                         }
                         

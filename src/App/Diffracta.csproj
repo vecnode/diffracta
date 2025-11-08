@@ -56,6 +56,7 @@
     <!-- Include media files as embedded resources -->
     <ItemGroup>
         <AvaloniaResource Include="Media\**\*" />
+        <AvaloniaResource Include="Utils_Slider.axaml" />
     </ItemGroup>
 
     <!-- Also copy video file to output so MediaPlayer can access via file:// -->

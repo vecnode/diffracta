@@ -50,10 +50,47 @@
             
             <Button Content="+"
                     VerticalAlignment="Center"
-                    Foreground="White"
+                    Background="#d3d3d3"
+                    Foreground="Black"
                     FontSize="14"
                     Click="OnAddTrackClick"
                     ToolTip.Tip="Add new track"/>
+            
+            <Button Content="▶"
+                    VerticalAlignment="Center"
+                    Background="#d3d3d3"
+                    Foreground="Black"
+                    FontSize="12"
+                    Width="28"
+                    Click="OnPlayClick"
+                    ToolTip.Tip="Play timeline"/>
+            
+            <Button Content="⏸"
+                    VerticalAlignment="Center"
+                    Background="#d3d3d3"
+                    Foreground="Black"
+                    FontSize="12"
+                    Width="28"
+                    Click="OnStopClick"
+                    ToolTip.Tip="Stop timeline"/>
+            
+            <Button Content="⏮"
+                    VerticalAlignment="Center"
+                    Background="#d3d3d3"
+                    Foreground="Black"
+                    FontSize="12"
+                    Width="28"
+                    Click="OnBeginningClick"
+                    ToolTip.Tip="Go to beginning"/>
+            
+            <Button Content="⏭"
+                    VerticalAlignment="Center"
+                    Background="#d3d3d3"
+                    Foreground="Black"
+                    FontSize="12"
+                    Width="28"
+                    Click="OnEndClick"
+                    ToolTip.Tip="Go to end"/>
           </StackPanel>
         </Border>
       </StackPanel>
@@ -155,7 +192,6 @@
           
           <Button Content="&lt;"
                   Width="32"
-                  Height="24"
                   VerticalAlignment="Center"
                   Margin="0"
                   Foreground="White"
@@ -165,7 +201,6 @@
           
           <Button Content="( )"
                   Width="32"
-                  Height="24"
                   VerticalAlignment="Center"
                   Margin="8,0,0,0"
                   Foreground="White"
@@ -173,21 +208,29 @@
                   Click="OnFitZoomClick"
                   ToolTip.Tip="Fit zoom to all tracks"/>
           
-          <TextBlock Text="Zoom" VerticalAlignment="Center" Margin="16,0,0,0" Foreground="White" FontSize="10"/>
-          
-          <Slider
-            Minimum="20" Maximum="400"
-            Width="220"
-            VerticalAlignment="Center"
-            Margin="0"
-            Value="{Binding Zoom, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}}"/>
-            
-          <TextBlock
-            VerticalAlignment="Center"
-            Margin="4,0,0,0"
-            Foreground="White"
-            FontSize="10"
-            Text="{Binding Zoom, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}, StringFormat={}{0:0} px/s}"/>
+          <Border BorderBrush="Black"
+                  BorderThickness="1"
+                  VerticalAlignment="Center"
+                  Margin="16,0,0,0"
+                  Padding="4,2">
+            <StackPanel Orientation="Horizontal" 
+                        Spacing="4" 
+                        VerticalAlignment="Center">
+              <TextBlock Text="Zoom" VerticalAlignment="Center" Foreground="White" FontSize="10"/>
+              
+              <Slider
+                Minimum="20" Maximum="400"
+                Width="160"
+                VerticalAlignment="Center"
+                Value="{Binding Zoom, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}}"/>
+                
+              <TextBlock
+                VerticalAlignment="Center"
+                Foreground="White"
+                FontSize="10"
+                Text="{Binding Zoom, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}, StringFormat={}{0:0} px/s}"/>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
     </ScrollViewer>
