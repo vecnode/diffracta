@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Controls.Templates;
+using Avalonia.Media;
 using System;
 
 namespace Diffracta;
@@ -78,6 +80,47 @@ public partial class Page2 : UserControl
         
         // Restore value text displays
         UpdateValueDisplays();
+        
+        // Set up DirectoryListBox ItemTemplate with colored [DIR] text
+        var directoryListBox = this.FindControl<ListBox>("DirectoryListBox");
+        if (directoryListBox != null)
+        {
+            directoryListBox.ItemTemplate = new FuncDataTemplate<string>((item, _) =>
+            {
+                if (item != null && item.StartsWith("[DIR]"))
+                {
+                    // Create a horizontal stack panel with [DIR] in yellow and rest in white
+                    var panel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
+                    
+                    var dirText = new TextBlock 
+                    { 
+                        Text = "[DIR]", 
+                        Foreground = Brushes.Yellow 
+                    };
+                    
+                    var rest = item.Substring(5).TrimStart();
+                    var nameText = new TextBlock 
+                    { 
+                        Text = string.IsNullOrEmpty(rest) ? "" : " " + rest, 
+                        Foreground = Brushes.White 
+                    };
+                    
+                    panel.Children.Add(dirText);
+                    panel.Children.Add(nameText);
+                    
+                    return panel;
+                }
+                else
+                {
+                    // Regular file, just white text
+                    return new TextBlock 
+                    { 
+                        Text = item ?? "", 
+                        Foreground = Brushes.White 
+                    };
+                }
+            });
+        }
     }
     
     private void UpdateValueDisplays()

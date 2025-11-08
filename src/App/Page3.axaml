@@ -9,13 +9,14 @@
             <!-- Timeline Editor Section -->
             <StackPanel Spacing="0" Margin="0,0,0,0">
                 <Border BorderBrush="Black" BorderThickness="2" HorizontalAlignment="Stretch">
-                    <timeline:TimelineEditor x:Name="TimelineEditorControl"
-                                             Width="700"
-                                             Height="400"
+                    <timeline:Utils_TimelineEditor x:Name="TimelineEditorControl"
+                                             Width="740"
+                                             Height="460"
                                              HorizontalAlignment="Left"
-                                             BorderThickness="2"
+                                             BorderThickness="1"
                                              BorderBrush="Green"
-                                             VerticalAlignment="Top"/>
+                                             VerticalAlignment="Top"
+                                             Padding="2"/>
                 </Border>
             </StackPanel>
             

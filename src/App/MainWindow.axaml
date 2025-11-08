@@ -5,7 +5,7 @@
         xmlns:gfx="using:Diffracta.Graphics"
         x:Class="Diffracta.MainWindow"
         x:DataType="local:MainWindow"
-        Width="1280" Height="720" Title="Diffracta (v0.1) 720p Window">
+        Width="1280" Height="720" Title="Diffracta (v0.1) 720p MainWindow">
   
   <Window.Resources>
     <!-- Custom Thumb Template for Square Thumb -->

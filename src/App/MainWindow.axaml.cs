@@ -610,6 +610,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     {
         var browseButton = page.FindControl<Button>("BrowseButton");
         var upButton = page.FindControl<Button>("UpButton");
+        var openButton = page.FindControl<Button>("OpenButton");
         var directoryListBox = page.FindControl<ListBox>("DirectoryListBox");
         var directoryPathTextBox = page.FindControl<TextBox>("DirectoryPathTextBox");
         
@@ -652,6 +653,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 LoadDirectoryContents(parentPath, directoryListBox);
                 
                 LogMessage($"Navigated to parent: {parentPath}");
+            };
+        }
+        
+        if (openButton != null && directoryPathTextBox != null)
+        {
+            openButton.Click += (_, __) =>
+            {
+                var currentPath = directoryPathTextBox.Text?.Trim() ?? string.Empty;
+                
+                if (string.IsNullOrWhiteSpace(currentPath))
+                {
+                    LogMessage("No directory path to open");
+                    return;
+                }
+                
+                if (!Directory.Exists(currentPath))
+                {
+                    LogMessage($"Directory does not exist: {currentPath}");
+                    return;
+                }
+                
+                // Open Windows Explorer with the current path
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = currentPath,
+                        UseShellExecute = true
+                    });
+                    LogMessage($"Opened in Explorer: {currentPath}");
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Failed to open Explorer: {ex.Message}");
+                }
             };
         }
         

@@ -55,7 +55,7 @@ public partial class Page3 : UserControl
             }
             
             // Check if TimelineEditor exists
-            var timelineEditor = this.FindControl<TimelineControl.TimelineEditor>("TimelineEditorControl");
+            var timelineEditor = this.FindControl<TimelineControl.Utils_TimelineEditor>("TimelineEditorControl");
             System.Diagnostics.Debug.WriteLine($"Page3: TimelineEditor found = {timelineEditor != null}");
         }
         catch (Exception ex)

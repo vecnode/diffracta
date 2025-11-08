@@ -18,22 +18,22 @@ namespace TimelineControl
     // ─────────────────────────────────────────────────────────────────────────────
     // Public host UserControl (expose bindable properties; auto-seeds demo data)
     // ─────────────────────────────────────────────────────────────────────────────
-    public partial class TimelineEditor : UserControl
+    public partial class Utils_TimelineEditor : UserControl
     {
         public static readonly StyledProperty<double> ZoomProperty =
-            AvaloniaProperty.Register<TimelineEditor, double>(nameof(Zoom), 120d);
+            AvaloniaProperty.Register<Utils_TimelineEditor, double>(nameof(Zoom), 120d);
 
         public static readonly StyledProperty<double> CursorTimeProperty =
-            AvaloniaProperty.Register<TimelineEditor, double>(nameof(CursorTime), 0d);
+            AvaloniaProperty.Register<Utils_TimelineEditor, double>(nameof(CursorTime), 0d);
 
         public static readonly StyledProperty<TimeSpan> DurationProperty =
-            AvaloniaProperty.Register<TimelineEditor, TimeSpan>(nameof(Duration), TimeSpan.FromSeconds(30));
+            AvaloniaProperty.Register<Utils_TimelineEditor, TimeSpan>(nameof(Duration), TimeSpan.FromSeconds(30));
 
         public static readonly StyledProperty<bool> SnapEnabledProperty =
-            AvaloniaProperty.Register<TimelineEditor, bool>(nameof(SnapEnabled), true);
+            AvaloniaProperty.Register<Utils_TimelineEditor, bool>(nameof(SnapEnabled), true);
 
         public static readonly StyledProperty<ObservableCollection<TimelineTrack>> TracksProperty =
-            AvaloniaProperty.Register<TimelineEditor, ObservableCollection<TimelineTrack>>(nameof(Tracks));
+            AvaloniaProperty.Register<Utils_TimelineEditor, ObservableCollection<TimelineTrack>>(nameof(Tracks));
 
         public double Zoom { get => GetValue(ZoomProperty); set => SetValue(ZoomProperty, value); }
         public double CursorTime { get => GetValue(CursorTimeProperty); set => SetValue(CursorTimeProperty, value); }
@@ -41,7 +41,7 @@ namespace TimelineControl
         public bool SnapEnabled { get => GetValue(SnapEnabledProperty); set => SetValue(SnapEnabledProperty, value); }
         public ObservableCollection<TimelineTrack> Tracks { get => GetValue(TracksProperty); set => SetValue(TracksProperty, value); }
 
-        public TimelineEditor()
+        public Utils_TimelineEditor()
         {
             // Set default values BEFORE InitializeComponent to ensure bindings work
             SetValue(ZoomProperty, 120d);
@@ -706,3 +706,5 @@ namespace TimelineControl
         }
     }
 }
+
+
