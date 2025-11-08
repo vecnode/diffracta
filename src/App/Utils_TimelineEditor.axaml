@@ -10,26 +10,53 @@
    <!-- TOP BAR -->
   
     <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-      
-      <!-- TOP BAR CONTROLS -->
-      <Border Margin="2,2"
-              Background="#8F473B"
-              Height="32"
+      <StackPanel Orientation="Vertical">
+        <!-- TOP BAR -->
+        <Border Margin="2,2"
+                Background="#8F473B"
+                Height="32"
+                VerticalAlignment="Center"
+                Padding="4,0">
+          <StackPanel Orientation="Horizontal" 
+                      Spacing="6" 
+                      VerticalAlignment="Center">
+            
+            <TextBlock
+              Text="Timeline"
               VerticalAlignment="Center"
-              Padding="4,0">
-        <StackPanel Orientation="Horizontal" 
-                    Spacing="6" 
-                    VerticalAlignment="Center">
-          
-          <CheckBox
-            Content="Snap"
-            VerticalAlignment="Center"
-            Margin="0"
-            Foreground="White"
-            FontSize="10"
-            IsChecked="{Binding SnapEnabled, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}}"/>
-        </StackPanel>
-      </Border>
+              Margin="0"
+              Foreground="White"
+              FontSize="10"/>
+          </StackPanel>
+        </Border>
+        
+        <!-- TOP BAR CONTROLS -->
+        <Border Margin="2,2"
+                Background="#8F473B"
+                Height="32"
+                VerticalAlignment="Center"
+                Padding="4,0">
+          <StackPanel Orientation="Horizontal" 
+                      Spacing="6" 
+                      VerticalAlignment="Center">
+            
+            <CheckBox
+              Content="Snap"
+              VerticalAlignment="Center"
+              Margin="0"
+              Foreground="White"
+              FontSize="10"
+              IsChecked="{Binding SnapEnabled, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}}"/>
+            
+            <Button Content="+"
+                    VerticalAlignment="Center"
+                    Foreground="White"
+                    FontSize="14"
+                    Click="OnAddTrackClick"
+                    ToolTip.Tip="Add new track"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
     </ScrollViewer>
 
 
@@ -56,20 +83,30 @@
       <Grid RowDefinitions="Auto,*" ColumnDefinitions="160,*" ClipToBounds="True">
         
         <!-- LEFT SIDEBAR (TRACK HEAD) -->
-        <Border Grid.Row="0" Grid.RowSpan="2"
-                Grid.Column="0"
-                Width="160"
-                Background="#3B3B3B"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Left">
-          <Grid RowDefinitions="24,*">
-            <!-- TOP BAR -->
-            <Border Grid.Row="0"
-                    Background="Pink"
-                    BorderBrush="Purple"
-                    BorderThickness="1"/>
-          </Grid>
-        </Border>
+        <Grid Grid.Row="0" Grid.RowSpan="2"
+              Grid.Column="0"
+              RowDefinitions="24,*"
+              Width="160"
+              Background="#3B3B3B"
+              ClipToBounds="True">
+          <!-- TOP BAR -->
+          <Border Grid.Row="0"
+                  Background="Pink"
+                  BorderBrush="Purple"
+                  BorderThickness="1"/>
+          
+          <!-- TRACK HEADS SCROLLER (synced with main canvas) -->
+          <ScrollViewer Grid.Row="1"
+                        Name="PART_TrackHeadScroller"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Hidden"
+                        Background="#3B3B3B"
+                        ClipToBounds="True">
+            <local:TimelineTrackHead
+              Name="PART_TrackHead"
+              Tracks="{Binding Tracks, RelativeSource={RelativeSource AncestorType=local:Utils_TimelineEditor}}"/>
+          </ScrollViewer>
+        </Grid>
         
         <!-- MAIN RULER -->
         <local:TimelineRuler

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -41,6 +42,8 @@ namespace TimelineControl
         public bool SnapEnabled { get => GetValue(SnapEnabledProperty); set => SetValue(SnapEnabledProperty, value); }
         public ObservableCollection<TimelineTrack> Tracks { get => GetValue(TracksProperty); set => SetValue(TracksProperty, value); }
 
+        private int _trackCounter = 0; // Global variable to track track numbers
+
         public Utils_TimelineEditor()
         {
             // Set default values BEFORE InitializeComponent to ensure bindings work
@@ -49,33 +52,39 @@ namespace TimelineControl
             SetValue(DurationProperty, TimeSpan.FromSeconds(30));
             SetValue(SnapEnabledProperty, true);
             
-            // Initialize Tracks BEFORE InitializeComponent
-            Tracks = new ObservableCollection<TimelineTrack>
-            {
-                new("Video") {
-                    Clips = new ObservableCollection<TimelineClip>
-                    {
-                        new TimelineClip("Intro",   0.0,  4.0, Color.FromRgb(0x42,0x84,0x18)),
-                        new TimelineClip("Main",    5.0, 14.0, Color.FromRgb(0x1e,0x88,0xe5)),
-                    }
-                },
-                new("Audio") {
-                    Clips = new ObservableCollection<TimelineClip>
-                    {
-                        new TimelineClip("Bed",     0.0, 30.0, Color.FromRgb(0x8e,0x24,0xaa))
-                    }
-                },
-                new("FX") {
-                    Clips = new ObservableCollection<TimelineClip>
-                    {
-                        new TimelineClip("Hit",     3.0,  5.5, Color.FromRgb(0xf4,0x43,0x36)),
-                        new TimelineClip("Whoosh", 12.0, 14.0, Color.FromRgb(0xff,0x98,0x00))
-                    }
-                }
-            };
+            // Initialize Tracks as empty collection BEFORE InitializeComponent
+            Tracks = new ObservableCollection<TimelineTrack>();
             
             // Now initialize XAML - properties are already set
             InitializeComponent();
+            
+            // Setup scroll synchronization between main canvas and track heads
+            SetupScrollSync();
+        }
+
+        private void SetupScrollSync()
+        {
+            try
+            {
+                var mainScroller = this.FindControl<ScrollViewer>("PART_Scroller");
+                var trackHeadScroller = this.FindControl<ScrollViewer>("PART_TrackHeadScroller");
+                
+                if (mainScroller != null && trackHeadScroller != null)
+                {
+                    // Sync main canvas scroll to track head scroll
+                    mainScroller.ScrollChanged += (sender, e) =>
+                    {
+                        if (trackHeadScroller != null)
+                        {
+                            trackHeadScroller.Offset = new Vector(trackHeadScroller.Offset.X, mainScroller.Offset.Y);
+                        }
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetupScrollSync error: {ex.Message}");
+            }
         }
 
         private void OnResetCursorClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -131,6 +140,61 @@ namespace TimelineControl
                 System.Diagnostics.Debug.WriteLine($"OnFitZoomClick error: {ex.Message}");
             }
         }
+
+        private void OnAddTrackClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            try
+            {
+                _trackCounter++;
+                string trackName = _trackCounter == 1 ? "Video" : $"Video {_trackCounter}";
+                
+                var newTrack = new TimelineTrack(trackName)
+                {
+                    Clips = new ObservableCollection<TimelineClip>()
+                };
+                
+                if (Tracks == null)
+                {
+                    Tracks = new ObservableCollection<TimelineTrack>();
+                }
+                
+                Tracks.Add(newTrack);
+                
+                // Force immediate visual update by finding and invalidating the canvas and track head
+                var canvas = this.FindControl<TimelineCanvas>("PART_Canvas");
+                if (canvas != null)
+                {
+                    canvas.InvalidateMeasure();
+                    canvas.InvalidateVisual();
+                }
+                
+                var trackHead = this.FindControl<TimelineTrackHead>("PART_TrackHead");
+                if (trackHead != null)
+                {
+                    // Ensure the track head's Tracks property is set (in case binding hasn't updated yet)
+                    if (trackHead.Tracks != Tracks)
+                    {
+                        trackHead.Tracks = Tracks;
+                    }
+                    
+                    // Force update of track heads - the CollectionChanged should handle this,
+                    // but we'll also ensure it happens by invalidating layout
+                    trackHead.InvalidateMeasure();
+                    trackHead.InvalidateArrange();
+                    trackHead.InvalidateVisual();
+                    
+                    System.Diagnostics.Debug.WriteLine($"OnAddTrackClick: Added track '{trackName}', TrackHead.Tracks count: {trackHead.Tracks?.Count ?? 0}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("OnAddTrackClick: PART_TrackHead not found!");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OnAddTrackClick error: {ex.Message}");
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -138,10 +202,21 @@ namespace TimelineControl
     // ─────────────────────────────────────────────────────────────────────────────
     public sealed class TimelineTrack : INotifyPropertyChanged
     {
-#pragma warning disable CS0067 // Event is never used
         public event PropertyChangedEventHandler? PropertyChanged;
-#pragma warning restore CS0067
-        public string Name { get; set; }
+
+        private string _name = "";
+        public string Name 
+        { 
+            get => _name; 
+            set 
+            { 
+                if (_name != value)
+                {
+                    _name = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+                }
+            } 
+        }
         public double Height { get; set; } = 56;
         public ObservableCollection<TimelineClip> Clips { get; set; } = new();
 
@@ -383,6 +458,7 @@ namespace TimelineControl
         private readonly IBrush _laneAltBrush = new SolidColorBrush(Color.FromRgb(20, 20, 20));
         private readonly Pen _gridPen = new(new SolidColorBrush(Color.FromRgb(45, 45, 45)), 1);
         private readonly Pen _cursorPen = new(Brushes.Orange, 1.5);
+        private readonly Pen _trackBorderPen = new(Brushes.LightGray, 1);
 
         private TimelineClip? _activeClip;
         private HitKind _hitKind = HitKind.None;
@@ -444,7 +520,8 @@ namespace TimelineControl
                 double height = 0;
                 if (Tracks != null && Tracks.Count > 0)
                 {
-                    height = Tracks.Sum(t => t?.Height ?? 56) + Math.Max(0, Tracks.Count - 1) * 1;
+                    // Sum of all track heights (no margins)
+                    height = Tracks.Sum(t => t?.Height ?? 56);
                 }
                 if (height <= 0)
                     height = 200; // Default height
@@ -485,7 +562,8 @@ namespace TimelineControl
                 }
 
                 // tracks
-                double y = 0;
+                const double trackMargin = 0.0; // No margin between tracks
+                double y = 0; // Start at top with no margin
                 if (Tracks != null && Tracks.Count > 0)
                 {
                     for (int i = 0; i < Tracks.Count; i++)
@@ -493,53 +571,8 @@ namespace TimelineControl
                         var track = Tracks[i];
                         if (track == null || track.Height <= 0) continue;
                         
-                        var laneRect = new Rect(0, y, width, track.Height);
-                        ctx.FillRectangle(i % 2 == 0 ? _laneBrush : _laneAltBrush, laneRect);
-
-                        // draw label
-                        try
-                        {
-                            var nameText = new FormattedText(track.Name ?? "", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _typeface, 12, Brushes.Gray);
-                            ctx.DrawText(nameText, new Point(8, y + 6));
-                        }
-                        catch { }
-
-                        // draw clips
-                        if (track.Clips != null && track.Clips.Count > 0)
-                        {
-                            foreach (var c in track.Clips)
-                            {
-                                if (c == null) continue;
-                                
-                                var rx = c.Start * Zoom;
-                                var rw = Math.Max(1, c.Duration * Zoom);
-                                var ry = y + 20;
-                                var rh = Math.Max(18, track.Height - 26);
-
-                                if (rw > 0 && rh > 0 && !double.IsNaN(rx) && !double.IsNaN(ry))
-                                {
-                                    var rect = new Rect(rx, ry, rw, rh);
-                                    ctx.FillRectangle(c.IsSelected ? c.FillSelected : c.Fill, rect);
-                                    ctx.DrawRectangle(c.IsSelected ? c.BorderSelected : c.Border, rect);
-
-                                    // handle bar zones
-                                    var left = new Rect(rx - 3, ry, 6, rh);
-                                    var right = new Rect(rx + rw - 3, ry, 6, rh);
-                                    ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), left);
-                                    ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), right);
-
-                                    // title
-                                    try
-                                    {
-                                        var title = new FormattedText(c.Title ?? "", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _typeface, 11, Brushes.White);
-                                        ctx.DrawText(title, new Point(rx + 6, ry + 2));
-                                    }
-                                    catch { }
-                                }
-                            }
-                        }
-
-                        y += track.Height + 1;
+                        RenderTrack(ctx, track, i, y, width);
+                        y += track.Height + trackMargin; // No margin between tracks
                     }
                 }
 
@@ -552,6 +585,83 @@ namespace TimelineControl
             {
                 System.Diagnostics.Debug.WriteLine($"TimelineCanvas Render error: {ex.Message}");
                 // Don't re-throw in Render - just log it
+            }
+        }
+
+        // ── Track Rendering ────────────────────────────────────────────────────────
+        private void RenderTrack(DrawingContext ctx, TimelineTrack track, int trackIndex, double y, double width)
+        {
+            if (track == null || track.Height <= 0) return;
+
+            try
+            {
+                // Track extends 2px more to the bottom (same top position, extends downward)
+                var renderHeight = track.Height;
+                
+                // Draw track background and border
+                var laneRect = new Rect(0, y, width, renderHeight);
+                ctx.FillRectangle(trackIndex % 2 == 0 ? _laneBrush : _laneAltBrush, laneRect);
+                ctx.DrawRectangle(_trackBorderPen, laneRect);
+
+                // Draw clips in this track
+                if (track.Clips != null && track.Clips.Count > 0)
+                {
+                    foreach (var clip in track.Clips)
+                    {
+                        RenderClip(ctx, clip, y, renderHeight);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TimelineCanvas RenderTrack error: {ex.Message}");
+            }
+        }
+
+        // ── Clip Rendering ─────────────────────────────────────────────────────────
+        private void RenderClip(DrawingContext ctx, TimelineClip clip, double trackY, double trackHeight)
+        {
+            if (clip == null) return;
+
+            try
+            {
+                var rx = clip.Start * Zoom;
+                var rw = Math.Max(1, clip.Duration * Zoom);
+                var ry = trackY + 20;
+                var rh = Math.Max(18, trackHeight - 26);
+
+                if (rw > 0 && rh > 0 && !double.IsNaN(rx) && !double.IsNaN(ry))
+                {
+                    var rect = new Rect(rx, ry, rw, rh);
+                    
+                    // Draw clip body
+                    ctx.FillRectangle(clip.IsSelected ? clip.FillSelected : clip.Fill, rect);
+                    ctx.DrawRectangle(clip.IsSelected ? clip.BorderSelected : clip.Border, rect);
+
+                    // Draw resize handles (bar zones)
+                    var left = new Rect(rx - 3, ry, 6, rh);
+                    var right = new Rect(rx + rw - 3, ry, 6, rh);
+                    ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), left);
+                    ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), right);
+
+                    // Draw clip title
+                    try
+                    {
+                        var title = new FormattedText(
+                            clip.Title ?? "",
+                            CultureInfo.InvariantCulture,
+                            FlowDirection.LeftToRight,
+                            _typeface,
+                            11,
+                            Brushes.White);
+                        ctx.DrawText(title, new Point(rx + 6, ry + 2));
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TimelineCanvas RenderClip error: {ex.Message}");
             }
         }
 
@@ -667,7 +777,8 @@ namespace TimelineControl
         {
             if (Tracks == null) return (null, HitKind.None);
             
-            double y = 0;
+            const double trackMargin = 0.0; // No margin, matching rendering
+            double y = 0; // Start at top with no margin, matching rendering
             foreach (var track in Tracks)
             {
                 if (p.Y >= y && p.Y < y + track.Height)
@@ -691,7 +802,7 @@ namespace TimelineControl
                         }
                     }
                 }
-                y += track.Height + 1;
+                y += track.Height + trackMargin; // No margin between tracks
             }
             
             return (null, HitKind.None);
@@ -705,6 +816,294 @@ namespace TimelineControl
             return Math.Round(time / snapStep) * snapStep;
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Track Head Control (left sidebar)
+    // ─────────────────────────────────────────────────────────────────────────────
+    public sealed class TimelineTrackHead : Panel
+    {
+        public static readonly StyledProperty<ObservableCollection<TimelineTrack>?> TracksProperty =
+            AvaloniaProperty.Register<TimelineTrackHead, ObservableCollection<TimelineTrack>?>(
+                nameof(Tracks), 
+                null,
+                coerce: CoerceTracks);
+
+        private static ObservableCollection<TimelineTrack>? CoerceTracks(AvaloniaObject obj, ObservableCollection<TimelineTrack>? value)
+        {
+            if (obj is TimelineTrackHead trackHead)
+            {
+                // Get the old value BEFORE the property is set
+                var oldValue = trackHead.GetValue(TracksProperty);
+                
+                // Only update subscription if the collection reference actually changed
+                if (!ReferenceEquals(oldValue, value))
+                {
+                    System.Diagnostics.Debug.WriteLine($"CoerceTracks: Collection reference changed. Old: {(oldValue != null ? "not null" : "null")}, New: {(value != null ? "not null" : "null")}");
+                    
+                    // Unsubscribe from old collection
+                    if (oldValue != null)
+                    {
+                        oldValue.CollectionChanged -= trackHead.OnTracksCollectionChanged;
+                        System.Diagnostics.Debug.WriteLine("CoerceTracks: Unsubscribed from old collection");
+                    }
+                    
+                    // Subscribe to new collection
+                    if (value != null)
+                    {
+                        value.CollectionChanged += trackHead.OnTracksCollectionChanged;
+                        System.Diagnostics.Debug.WriteLine($"CoerceTracks: Subscribed to new collection with {value.Count} tracks");
+                    }
+                }
+            }
+            
+            return value;
+        }
+
+        public ObservableCollection<TimelineTrack>? Tracks 
+        { 
+            get => GetValue(TracksProperty); 
+            set => SetValue(TracksProperty, value);
+        }
+
+        protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+        {
+            base.OnPropertyChanged(change);
+            
+            if (change.Property == TracksProperty)
+            {
+                // Update track heads when property changes (via binding or direct set)
+                UpdateTrackHeads();
+                InvalidateMeasure();
+                InvalidateArrange();
+            }
+        }
+
+        private void OnTracksCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"OnTracksCollectionChanged: Action={e.Action}, Tracks count: {Tracks?.Count ?? 0}");
+                UpdateTrackHeads();
+                InvalidateMeasure();
+                InvalidateArrange();
+                InvalidateVisual();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OnTracksCollectionChanged error: {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+
+        private readonly IBrush _laneBrush = new SolidColorBrush(Color.FromRgb(26, 26, 26));
+        private readonly IBrush _laneAltBrush = new SolidColorBrush(Color.FromRgb(20, 20, 20));
+        private readonly Pen _trackBorderPen = new(Brushes.LightGray, 1);
+        private readonly Dictionary<TimelineTrack, Border> _trackHeadControls = new();
+
+        public TimelineTrackHead()
+        {
+            Background = new SolidColorBrush(Color.FromRgb(59, 59, 59)); // #3B3B3B
+            AffectsMeasure<TimelineTrackHead>(TracksProperty);
+            
+            // Ensure track heads are updated when control is loaded
+            Loaded += (s, e) =>
+            {
+                // Ensure CollectionChanged subscription is set up
+                if (Tracks != null)
+                {
+                    try
+                    {
+                        // Ensure subscription is set up (coerce should handle this, but ensure it)
+                        Tracks.CollectionChanged -= OnTracksCollectionChanged; // Remove if exists
+                        Tracks.CollectionChanged += OnTracksCollectionChanged; // Add subscription
+                    }
+                    catch { }
+                    
+                    UpdateTrackHeads();
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            };
+        }
+
+        private void UpdateTrackHeads()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateTrackHeads called, Tracks count: {Tracks?.Count ?? 0}");
+                
+                // Remove controls for tracks that no longer exist
+                var tracksToRemove = _trackHeadControls.Keys.Where(t => Tracks == null || !Tracks.Contains(t)).ToList();
+                foreach (var track in tracksToRemove)
+                {
+                    if (_trackHeadControls.TryGetValue(track, out var border))
+                    {
+                        Children.Remove(border);
+                        _trackHeadControls.Remove(track);
+                    }
+                }
+
+                if (Tracks == null) return;
+
+                // Add or update controls for existing tracks
+                for (int i = 0; i < Tracks.Count; i++)
+                {
+                    var track = Tracks[i];
+                    if (track == null) continue;
+
+                    if (!_trackHeadControls.ContainsKey(track))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Creating track head for track: {track.Name}, index: {i}");
+                        
+                        // Create new track head control
+                        var border = new Border
+                        {
+                            Background = i % 2 == 0 ? _laneBrush : _laneAltBrush,
+                            BorderBrush = Brushes.LightGray,
+                            BorderThickness = new Thickness(0.5), // 0.5px to render as 1px
+                            Child = new TextBox
+                            {
+                                Text = track.Name ?? "",
+                                Background = Brushes.Transparent,
+                                BorderThickness = new Thickness(1),
+                                BorderBrush = Brushes.LightGray,
+                                CornerRadius = new CornerRadius(0),
+                                Foreground = Brushes.Gray,
+                                FontSize = 12,
+                                Padding = new Thickness(0),
+                                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                                VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
+                            }
+                        };
+
+                        // Bind TextBox text to track name
+                        var textBox = (TextBox)border.Child;
+                        textBox.TextChanged += (s, e) =>
+                        {
+                            if (textBox.Text != null)
+                            {
+                                track.Name = textBox.Text;
+                            }
+                        };
+
+                        // Subscribe to track name changes
+                        track.PropertyChanged += (s, e) =>
+                        {
+                            if (e.PropertyName == "Name" && textBox.Text != track.Name)
+                            {
+                                textBox.Text = track.Name ?? "";
+                            }
+                        };
+
+                        // Ensure the border is visible and properly sized
+                        border.IsVisible = true;
+                        border.Width = double.NaN; // Let it fill available width
+                        border.Height = track.Height; // Same height as tracks
+                        
+                        Children.Add(border);
+                        _trackHeadControls[track] = border;
+                        
+                        // Force measure and arrange of the new control
+                        border.Measure(new Size(double.PositiveInfinity, track.Height));
+                    }
+                    else
+                    {
+                        // Update background color for existing tracks (in case indices changed)
+                        if (_trackHeadControls.TryGetValue(track, out var border))
+                        {
+                            border.Background = i % 2 == 0 ? _laneBrush : _laneAltBrush;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateTrackHeads error: {ex.Message}");
+            }
+        }
+
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            try
+            {
+                if (double.IsNaN(availableSize.Width) || double.IsInfinity(availableSize.Width))
+                    availableSize = availableSize.WithWidth(160);
+                if (double.IsNaN(availableSize.Height) || double.IsInfinity(availableSize.Height))
+                    availableSize = availableSize.WithHeight(500);
+                
+                // Measure all child controls
+                foreach (var child in Children)
+                {
+                    if (child != null)
+                    {
+                        child.Measure(availableSize);
+                    }
+                }
+                
+                double height = 0;
+                if (Tracks != null && Tracks.Count > 0)
+                {
+                    // Sum of all track heights (no margins, same height as tracks)
+                    height = Tracks.Sum(t => t?.Height ?? 56);
+                }
+                if (height <= 0)
+                    height = 200;
+                
+                return new Size(Math.Max(availableSize.Width, 160), Math.Max(availableSize.Height, height));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TimelineTrackHead MeasureOverride error: {ex.Message}");
+                return new Size(160, 200);
+            }
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            try
+            {
+                const double trackMargin = 0.0; // No margin between tracks
+                double y = 0; // Start at top with no margin
+                
+                if (Tracks != null && Tracks.Count > 0)
+                {
+                    for (int i = 0; i < Tracks.Count; i++)
+                    {
+                        var track = Tracks[i];
+                        if (track == null || track.Height <= 0) continue;
+                        
+                        if (_trackHeadControls.TryGetValue(track, out var border))
+                        {
+                            // Update background color based on index
+                            border.Background = i % 2 == 0 ? _laneBrush : _laneAltBrush;
+                            
+                            // Arrange the border (same height as track)
+                            border.Arrange(new Rect(0, y, finalSize.Width, track.Height));
+                            
+                            // Set TextBox width to half of track head width and height based on font size
+                            if (border.Child is TextBox textBox)
+                            {
+                                textBox.Width = finalSize.Width * 0.5;
+                                // Height based on font size (12) + padding for comfortable text display
+                                textBox.Height = textBox.FontSize + 8;
+                            }
+                        }
+                        
+                        y += track.Height + trackMargin; // No margin between tracks
+                    }
+                }
+                
+                return finalSize;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TimelineTrackHead ArrangeOverride error: {ex.Message}");
+                return finalSize;
+            }
+        }
+    }
 }
+
 
 
