@@ -3,10 +3,11 @@
              xmlns:local="using:Diffracta"
              x:Class="Diffracta.Page1"
              x:DataType="local:MainWindow">
-    <Grid>
+    <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="0"/>
         </Grid.RowDefinitions>
         
         <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
@@ -34,6 +35,15 @@
                         BorderBrush="Black"
                         BorderThickness="1"
                         CornerRadius="4"/>
+                <Button x:Name="SplitVerticalButton" 
+                        Content="Split Vertical" 
+                        Width="100" 
+                        Background="#d3d3d3"
+                        Foreground="Black"
+                        BorderBrush="Black"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Click="OnSplitVerticalClick"/>
                 <TextBlock x:Name="TempoDisplay" 
                            Text="{Binding Tempo.TimeDisplay}" 
                            Foreground="White" 
@@ -59,7 +69,7 @@
 
         <Separator Height="1" Background="#555555" Margin="8,4"/>
         
-        <ScrollViewer Grid.Row="1" Margin="8,0,8,8">
+        <ScrollViewer x:Name="MainScrollViewer" Grid.Row="1" Margin="8,0,8,8">
             <StackPanel Spacing="12">
 
                 <Border Background="#1e1e1e" Padding="4">
@@ -79,6 +89,20 @@
                 
             </StackPanel>
         </ScrollViewer>
+        
+        <!-- This will be dynamically shown when split -->
+        <Grid x:Name="SplitGrid" Grid.Row="2" Margin="8,0,8,8" IsVisible="False">
+            <Border Background="Pink" BorderBrush="Black" BorderThickness="1" Padding="12" CornerRadius="0">
+                <TextBlock x:Name="RandomTextBlock" 
+                           Text="Random Text for Testing" 
+                           Foreground="White" 
+                           FontSize="16"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"/>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
+
+
 

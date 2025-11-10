@@ -5,9 +5,9 @@
   <!-- Simple Horizontal Slider Style -->
   <Style Selector="Slider:horizontal">
     <Setter Property="MinWidth" Value="32" />
-    <Setter Property="Foreground" Value="White"/>
-    <Setter Property="Background" Value="DarkGray"/>
-    <Setter Property="BorderBrush" Value="Pink"/>
+    <Setter Property="Foreground" Value="#888888"/>
+    <Setter Property="Background" Value="#3d3d3d"/>
+    <Setter Property="BorderBrush" Value="#555555"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="HorizontalAlignment" Value="Left"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -23,12 +23,16 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="0"/>
+        <Setter Property="Background" Value="#3d3d3d"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
       </Style>
     </Style>
                       
     <Style Selector="^ Thumb">
       <Setter Property="Theme" Value="{StaticResource SquareThumbTheme}"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Background" Value="#888888"/>
+      <Setter Property="BorderBrush" Value="#666666"/>
     </Style>
   </Style>
 

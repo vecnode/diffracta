@@ -16,22 +16,50 @@ using Melanchall.DryWetMidi.Core;
 
 namespace Diffracta;
 
+// ============================================================================
+// MAIN WINDOW - Primary application window for Diffracta shader application
+// ============================================================================
+// This class manages the main UI, shader loading, post-processing pipeline,
+// MIDI integration, file management, and performance mode.
+// ============================================================================
 public partial class MainWindow : Window, INotifyPropertyChanged {
+    
+    // ========================================================================
+    // PRIVATE FIELDS - Application State
+    // ========================================================================
+    
+    // File system and shader management
     private FileSystemWatcher? _watcher;
-    private string _shaderDir = Path.Combine(AppContext.BaseDirectory, "Shaders");
+    private string _shaderDir = System.IO.Path.Combine(AppContext.BaseDirectory, "Shaders");
+    
+    // Logging system
     private readonly StringBuilder _logBuffer = new();
-    private bool _isPerformanceMode = false;
-    private MainTempo _globalTempoNumber;
-    private DispatcherTimer? _tempoTimer;
-    private bool _isTempoRunning = false;
     private bool _isLogPanelVisible = false;
+    
+    // Performance mode state
+    private bool _isPerformanceMode = false;
+    
+    // Tempo/Clock management
+    private MainTempo _globalTempoNumber;
+    private bool _isTempoRunning = false;
+    
+    // Child window management
     private ChildWindow? _childWindow;
-
-    // MIDI state
+    
+    // ========================================================================
+    // CENTRALIZED TIMER MANAGEMENT - Single timer for all periodic updates
+    // ========================================================================
+    private DispatcherTimer? _globalUpdateTimer;
+    private readonly List<Action> _timerCallbacks = new();
+    private int _tempoTickCounter = 0; // Count ticks for 1-second tempo updates (10 ticks at 100ms)
+    private const int GLOBAL_TIMER_INTERVAL_MS = 100; // 10 updates per second base rate
+    private const int TEMPO_TICKS_PER_SECOND = 10; // 1000ms / 100ms = 10 ticks
+    
+    // MIDI device state
     private InputDevice? _activeMidiDevice;
     private readonly ObservableCollection<string> _midiInEvents = new();
     
-    // Slider state management
+    // Post-process slot state management (3 slots for shader effects)
     private readonly bool[] _slotActiveStates = new bool[3];
     private readonly float[] _slotValues = new float[3];
     
@@ -39,9 +67,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private string _currentDirectoryPath = string.Empty;
     private readonly List<string> _fullDirectoryItems = new();
     
+    // ========================================================================
+    // PUBLIC EVENTS
+    // ========================================================================
     
     public new event PropertyChangedEventHandler? PropertyChanged;
-
+    
+    // ========================================================================
+    // CONSTRUCTOR - Initialize window and wire up event handlers
+    // ========================================================================
+    
     public MainWindow() {
         InitializeComponent();
         
@@ -51,25 +86,69 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Set up data binding
         DataContext = this;
 
+        // Window lifecycle events
         Loaded += (_, __) => {
-            Directory.CreateDirectory(_shaderDir);
-            LogMessage("Application started");
-            LogMessage($"Shader directory: {_shaderDir}");
-            Surface.SetLogCallback(LogMessage);
-            SetupWatcher();
-            UpdateTabContent();
-            LogMessage("Ready - Select a shader from the dropdown");
+            try
+            {
+                Directory.CreateDirectory(_shaderDir);
+                LogMessage("Application started");
+                LogMessage($"Shader directory: {_shaderDir}");
+                
+                if (Surface != null)
+                {
+                    Surface.SetLogCallback(LogMessage);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("WARNING: Surface is null in Loaded event");
+                }
+                
+                SetupWatcher();
+                UpdateTabContent();
+                LogMessage("Ready - Select a shader from the dropdown");
 
-            // Wire MIDI UI when available
-            var midiInList = this.FindControl<ListBox>("MidiInEventsList");
-            if (midiInList != null) midiInList.ItemsSource = _midiInEvents;
-            var midiList = this.FindControl<ListBox>("MidiDevicesList");
-            if (midiList != null) midiList.SelectionChanged += OnMidiDeviceSelected;
-            
-            // Initialize with controls page
-            SwitchToPage(1);
+                // Wire MIDI UI when available
+                var midiInList = this.FindControl<ListBox>("MidiInEventsList");
+                if (midiInList != null) midiInList.ItemsSource = _midiInEvents;
+                var midiList = this.FindControl<ListBox>("MidiDevicesList");
+                if (midiList != null) midiList.SelectionChanged += OnMidiDeviceSelected;
+                
+                // Start centralized global update timer
+                StartGlobalUpdateTimer();
+                
+                // Wire up processing node controls (clickable rectangles and sliders)
+                try
+                {
+                    WireUpProcessingNodeControls();
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Error wiring up processing node controls: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Error wiring up processing node controls: {ex}");
+                }
+                
+                // Initialize with controls page
+                SwitchToPage(1);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"FATAL ERROR in Loaded event: {ex.Message}\n{ex.StackTrace}");
+                // Try to log to file
+                try
+                {
+                    var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "error.log");
+                    System.IO.File.AppendAllText(logPath, $"[{DateTime.Now}] FATAL ERROR in Loaded: {ex.Message}\n{ex.StackTrace}\n\n");
+                }
+                catch { }
+            }
+        };
+        
+        Closed += (_, __) => {
+            // Clean up all timers on window close
+            StopGlobalUpdateTimer();
         };
 
+        // Toolbar button handlers
         PerformanceButton.Click += (_, __) => {
             TogglePerformanceMode();
         };
@@ -78,6 +157,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             ToggleLogPanel();
         };
 
+        // Log panel button handlers
         ClearLogButton.Click += (_, __) => {
             _logBuffer.Clear();
             LogTextBox.Text = string.Empty;
@@ -112,24 +192,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             }
         };
     }
-
+    
+    // ========================================================================
+    // SHADER MANAGEMENT - File operations and shader loading
+    // ========================================================================
+    
+    /// <summary>
+    /// Populates the shader picker dropdown with available .glsl files
+    /// </summary>
     private void PopulatePicker(Page1? page = null) {
         var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
-            .OrderBy(p => Path.GetFileName(p))
-            .Select(p => Path.GetFileName(p))
+            .OrderBy(p => System.IO.Path.GetFileName(p))
+            .Select(p => System.IO.Path.GetFileName(p))
             .ToList();
 
         if (page != null) {
             var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
             if (shaderPicker != null) {
                 shaderPicker.ItemsSource = items;
-        if (items.Count > 0) {
+                if (items.Count > 0) {
                     shaderPicker.SelectedIndex = 0;
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Sets up file system watcher to monitor shader directory for changes
+    /// </summary>
     private void SetupWatcher() {
         _watcher = new FileSystemWatcher(_shaderDir, "*.glsl") {
             IncludeSubdirectories = false,
@@ -141,6 +231,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         _watcher.EnableRaisingEvents = true;
     }
     
+    /// <summary>
+    /// Refreshes the current page when shader files change
+    /// </summary>
     private void RefreshCurrentPage()
     {
         // Refresh the current page (typically the controls page)
@@ -150,277 +243,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    public void LogMessage(string message) {
-        var timestamp = DateTime.Now.ToString("HH:mm:ss");
-        var logEntry = $"[{timestamp}] {message}";
-        
-        _logBuffer.AppendLine(logEntry);
-        
-        Dispatcher.UIThread.Post(() => {
-            LogTextBox.Text = _logBuffer.ToString();
-            // Auto-scroll to bottom
-            LogScrollViewer.ScrollToEnd();
-        });
-    }
-
-    private void TogglePerformanceMode() {
-        if (_isPerformanceMode) {
-            ExitPerformanceMode();
-        } else {
-            EnterPerformanceMode();
-        }
-    }
-
-    private void EnterPerformanceMode() {
-        _isPerformanceMode = true;
-        PerformanceButton.Content = "Exit Performance";
-        
-        // Hide all UI panels but keep the shader surface visible
-        MenuBar.IsVisible = false;
-        LeftSidebar.IsVisible = false;
-        TopToolbar.IsVisible = false;
-        ControlsPanel.IsVisible = false;
-        BottomRightPanel.IsVisible = false;
-        VerticalSplitter.IsVisible = false;
-        HorizontalSplitter.IsVisible = false;
-        
-        // Go fullscreen for Performance mode to use full viewport
-        WindowState = WindowState.FullScreen;
-        
-        // Hide mouse cursor in performance mode
-        Cursor = Avalonia.Input.Cursor.Parse("None");
-        
-        // Make the shader surface span the entire viewport
-        Surface.SetValue(Grid.RowProperty, 0);
-        Surface.SetValue(Grid.ColumnProperty, 0);
-        Surface.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows (menu, toolbar, shader, bottom)
-        Surface.SetValue(Grid.ColumnSpanProperty, 3);
-        
-        LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
-        UpdateTabContent();
-    }
-
-    private void ExitPerformanceMode() {
-        _isPerformanceMode = false;
-        PerformanceButton.Content = "Performance";
-        
-        // Return to windowed mode
-        WindowState = WindowState.Normal;
-        
-        // Restore mouse cursor
-        Cursor = Avalonia.Input.Cursor.Parse("Arrow");
-        
-        // Show all panels again
-        MenuBar.IsVisible = true;
-        LeftSidebar.IsVisible = true;
-        TopToolbar.IsVisible = true;
-        ControlsPanel.IsVisible = true;
-        BottomRightPanel.IsVisible = true;
-        VerticalSplitter.IsVisible = true;
-        HorizontalSplitter.IsVisible = true;
-        
-        // Restore normal layout (shader in top-right quadrant)
-        Surface.SetValue(Grid.RowProperty, 2); // Now row 2 (after menu and toolbar)
-        Surface.SetValue(Grid.ColumnProperty, 2);
-        Surface.SetValue(Grid.RowSpanProperty, 1);
-        Surface.SetValue(Grid.ColumnSpanProperty, 1);
-        
-        LogMessage("Exited performance mode");
-        UpdateTabContent();
-    }
-
-    private void ToggleLogPanel()
-    {
-        _isLogPanelVisible = !_isLogPanelVisible;
-        LogPopupPanel.IsVisible = _isLogPanelVisible;
-        
-        if (_isLogPanelVisible)
-        {
-            LogMessage("Log panel opened");
-        }
-        else
-        {
-            LogMessage("Log panel closed");
-        }
-    }
-
-    private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
-    private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
-    private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
-
-    private void OnSlot1ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(0, sender, e);
-    private void OnSlot2ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(1, sender, e);
-    private void OnSlot3ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(2, sender, e);
-
-    private void OnSlotToggleClicked(int slot, object? sender, RoutedEventArgs e)
-    {
-        if (Surface != null)
-        {
-            bool newState = !Surface.GetSlotActive(slot);
-            Surface.SetSlotActive(slot, newState);
-            _slotActiveStates[slot] = newState; // Store state
-            LogMessage($"Slot {slot + 1} shader {(newState ? "activated" : "deactivated")}");
-            
-            // Update button appearance
-            var button = sender as Button;
-            if (button != null)
-            {
-                button.Content = newState ? "ON" : "OFF";
-                button.Background = newState ? 
-                    Avalonia.Media.SolidColorBrush.Parse("#ff8c00") : Avalonia.Media.SolidColorBrush.Parse("#d3d3d3");
-            }
-            
-            UpdateTabContent();
-        }
-    }
-
-    private void OnSlotValueChanged(int slot, object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (Surface != null && e.NewValue is double value)
-        {
-            Surface.SetSlotValue(slot, (float)value);
-            _slotValues[slot] = (float)value; // Store value
-            LogMessage($"Slot {slot + 1} value changed to {value:F2}");
-            
-            // Update the UI text block to show the current value from Page1
-            if (PageContentControl.Content is Page1 controlsPage)
-            {
-                string textBlockName = $"Slot{slot + 1}Value";
-                var textBlock = controlsPage.FindControl<TextBlock>(textBlockName);
-                if (textBlock != null)
-                {
-                    textBlock.Text = value.ToString("F2");
-                }
-            }
-            
-            UpdateTabContent();
-        }
-    }
-    
-    // Get slot states for restoration
-    public bool GetSlotActive(int slot) => _slotActiveStates[slot];
-    public float GetSlotValue(int slot) => _slotValues[slot];
-
-    private void OnTouchpadClicked(object? sender, RoutedEventArgs e)
-    {
-        LogMessage("Touchpad button clicked!");
-        Console.WriteLine("Touchpad button clicked!");
-    }
-
-    private void OnTempoButtonPressed(object? sender, RoutedEventArgs e)
-    {
-        LogMessage("=== TEMPO BUTTON CLICKED ===");
-        LogMessage($"Tempo button pressed - Current state: {(_isTempoRunning ? "Running" : "Stopped")}");
-        
-        if (_isTempoRunning)
-        {
-            StopTempo();
-        }
-        else
-        {
-            StartTempo();
-        }
-    }
-
-    private void OnResetButtonClicked(object? sender, RoutedEventArgs e)
-    {
-        StopTempo();
-        _globalTempoNumber.Reset();
-        LogMessage("Tempo reset");
-    }
-
-    private void StartTempo()
-    {
-        _isTempoRunning = true;
-        _tempoTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(1)
-        };
-        _tempoTimer.Tick += (_, __) => {
-            _globalTempoNumber.Increment();
-            LogMessage($"Global Tempo: {_globalTempoNumber.TimeDisplay} (Seconds: {_globalTempoNumber.Seconds})");
-        };
-        _tempoTimer.Start();
-        
-        // Notify UI of button state changes
-        OnPropertyChanged(nameof(TempoButtonText));
-        OnPropertyChanged(nameof(TempoButtonBackground));
-        
-        LogMessage("Tempo started");
-    }
-
-    private void StopTempo()
-    {
-        _isTempoRunning = false;
-        _tempoTimer?.Stop();
-        _tempoTimer = null;
-        
-        // Notify UI of button state changes
-        OnPropertyChanged(nameof(TempoButtonText));
-        OnPropertyChanged(nameof(TempoButtonBackground));
-        
-        LogMessage($"Tempo stopped - Total time: {_globalTempoNumber.TimeDisplay}");
-    }
-
-    // Properties for data binding
-    public MainTempo Tempo => _globalTempoNumber;
-    
-    public string TempoButtonText => _isTempoRunning ? "Stop Clock" : "Start Clock";
-    
-    public string TempoButtonBackground => _isTempoRunning ? "#ff8c00" : "#d3d3d3";
-
-    private void UpdateTabContent()
-    {
-        // Update Info tab - get current shader from the controls page
-        if (PageContentControl.Content is Page1 controlsPage)
-        {
-            var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
-            var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
-            
-            if (shaderPicker?.SelectedItem is string selectedShader && shaderInfoText != null)
-            {
-                var fullPath = Path.Combine(_shaderDir, selectedShader);
-                var fileInfo = new FileInfo(fullPath);
-                shaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
-            }
-            else if (shaderInfoText != null)
-            {
-                shaderInfoText.Text = "No shader loaded";
-            }
-        }
-
-        // Populate MIDI devices list in Global tab
-        var midiList = this.FindControl<ListBox>("MidiDevicesList");
-        if (midiList != null)
-        {
-            try
-            {
-                var names = new List<string>();
-                foreach (var device in InputDevice.GetAll())
-                {
-                    try { names.Add(device.Name); }
-                    finally { device.Dispose(); }
-                }
-
-                if (names.Count == 0)
-                {
-                    midiList.ItemsSource = new[] { "None" };
-                }
-                else
-                {
-                    midiList.ItemsSource = names.OrderBy(n => n).ToList();
-                    // auto-select first if none selected
-                    if (midiList.SelectedIndex < 0)
-                        midiList.SelectedIndex = 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                midiList.ItemsSource = new[] { $"Error: {ex.Message}" };
-            }
-        }
-    }
-
+    /// <summary>
+    /// Loads shader files from file picker dialog and imports them to shader directory
+    /// </summary>
     public async Task LoadShaderFiles()
     {
         try
@@ -469,7 +294,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 try
                 {
                     var fileName = file.Name;
-                    var destinationPath = Path.Combine(_shaderDir, fileName);
+                    var destinationPath = System.IO.Path.Combine(_shaderDir, fileName);
 
                     // Check if file already exists
                     if (File.Exists(destinationPath))
@@ -514,13 +339,660 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             LogMessage($"Error during file import: {ex.Message}");
         }
     }
-
-    protected virtual void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    
+    // ========================================================================
+    // LOGGING SYSTEM - Message logging and log panel management
+    // ========================================================================
+    
+    /// <summary>
+    /// Logs a message with timestamp to the log buffer and updates UI
+    /// Thread-safe: Uses Dispatcher to update UI from any thread
+    /// </summary>
+    public void LogMessage(string message) {
+        var timestamp = DateTime.Now.ToString("HH:mm:ss");
+        var logEntry = $"[{timestamp}] {message}";
+        
+        _logBuffer.AppendLine(logEntry);
+        
+        Dispatcher.UIThread.Post(() => {
+            LogTextBox.Text = _logBuffer.ToString();
+            // Auto-scroll to bottom
+            LogScrollViewer.ScrollToEnd();
+        });
     }
 
-    // Page navigation method
+    /// <summary>
+    /// Toggles the visibility of the log panel
+    /// </summary>
+    private void ToggleLogPanel()
+    {
+        _isLogPanelVisible = !_isLogPanelVisible;
+        LogPopupPanel.IsVisible = _isLogPanelVisible;
+        
+        if (_isLogPanelVisible)
+        {
+            LogMessage("Log panel opened");
+        }
+        else
+        {
+            LogMessage("Log panel closed");
+        }
+    }
+    
+    // ========================================================================
+    // PERFORMANCE MODE - Fullscreen shader rendering mode
+    // ========================================================================
+    
+    /// <summary>
+    /// Toggles between normal and performance mode
+    /// </summary>
+    private void TogglePerformanceMode() {
+        if (_isPerformanceMode) {
+            ExitPerformanceMode();
+        } else {
+            EnterPerformanceMode();
+        }
+    }
+
+    /// <summary>
+    /// Enters performance mode: hides all UI, goes fullscreen, spans shader across entire viewport
+    /// </summary>
+    private void EnterPerformanceMode() {
+        _isPerformanceMode = true;
+        PerformanceButton.Content = "Exit Performance";
+        
+        // Hide all UI panels but keep the shader surface visible
+        MenuBar.IsVisible = false;
+        LeftSidebar.IsVisible = false;
+        TopToolbar.IsVisible = false;
+        ControlsPanel.IsVisible = false;
+        BottomRightPanel.IsVisible = false;
+        VerticalSplitter.IsVisible = false;
+        HorizontalSplitter.IsVisible = false;
+        
+        // Go fullscreen for Performance mode to use full viewport
+        WindowState = WindowState.FullScreen;
+        
+        // Hide mouse cursor in performance mode
+        Cursor = Avalonia.Input.Cursor.Parse("None");
+        
+        // Make the shader surface span the entire viewport
+        Surface.SetValue(Grid.RowProperty, 0);
+        Surface.SetValue(Grid.ColumnProperty, 0);
+        Surface.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows (menu, toolbar, shader, bottom)
+        Surface.SetValue(Grid.ColumnSpanProperty, 3);
+        
+        LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
+        UpdateTabContent();
+    }
+
+    /// <summary>
+    /// Exits performance mode: restores UI panels and normal window layout
+    /// </summary>
+    private void ExitPerformanceMode() {
+        _isPerformanceMode = false;
+        PerformanceButton.Content = "Performance";
+        
+        // Return to windowed mode
+        WindowState = WindowState.Normal;
+        
+        // Restore mouse cursor
+        Cursor = Avalonia.Input.Cursor.Parse("Arrow");
+        
+        // Show all panels again
+        MenuBar.IsVisible = true;
+        LeftSidebar.IsVisible = true;
+        TopToolbar.IsVisible = true;
+        ControlsPanel.IsVisible = true;
+        BottomRightPanel.IsVisible = true;
+        VerticalSplitter.IsVisible = true;
+        HorizontalSplitter.IsVisible = true;
+        
+        // Restore normal layout (shader in top-right quadrant)
+        Surface.SetValue(Grid.RowProperty, 2); // Now row 2 (after menu and toolbar)
+        Surface.SetValue(Grid.ColumnProperty, 2);
+        Surface.SetValue(Grid.RowSpanProperty, 1);
+        Surface.SetValue(Grid.ColumnSpanProperty, 1);
+        
+        LogMessage("Exited performance mode");
+        UpdateTabContent();
+    }
+    
+    // ========================================================================
+    // POST-PROCESS SLOT MANAGEMENT - Shader effect slot controls
+    // ========================================================================
+    
+    // Event handler wrappers for slot toggles
+    private void OnSlot1ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(0, sender, e);
+    private void OnSlot2ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(1, sender, e);
+    private void OnSlot3ToggleClicked(object? sender, RoutedEventArgs e) => OnSlotToggleClicked(2, sender, e);
+
+    // Event handler wrappers for slot value changes
+    private void OnSlot1ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(0, sender, e);
+    private void OnSlot2ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(1, sender, e);
+    private void OnSlot3ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => OnSlotValueChanged(2, sender, e);
+
+    /// <summary>
+    /// Handles slot toggle button clicks - activates/deactivates post-process shader slots
+    /// </summary>
+    private void OnSlotToggleClicked(int slot, object? sender, RoutedEventArgs e)
+    {
+        if (Surface != null)
+        {
+            bool newState = !Surface.GetSlotActive(slot);
+            Surface.SetSlotActive(slot, newState);
+            _slotActiveStates[slot] = newState; // Store state
+            LogMessage($"Slot {slot + 1} shader {(newState ? "activated" : "deactivated")}");
+            
+            // Update button appearance
+            var button = sender as Button;
+            if (button != null)
+            {
+                button.Content = newState ? "ON" : "OFF";
+                button.Background = newState ? 
+                    Avalonia.Media.SolidColorBrush.Parse("#ff8c00") : Avalonia.Media.SolidColorBrush.Parse("#d3d3d3");
+            }
+            
+            UpdateTabContent();
+        }
+    }
+
+    /// <summary>
+    /// Handles slot slider value changes - updates post-process shader parameter values
+    /// </summary>
+    private void OnSlotValueChanged(int slot, object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (Surface != null && e.NewValue is double value)
+        {
+            Surface.SetSlotValue(slot, (float)value);
+            _slotValues[slot] = (float)value; // Store value
+            LogMessage($"Slot {slot + 1} value changed to {value:F2}");
+            
+            // Update the UI text block to show the current value from Page1
+            if (PageContentControl.Content is Page1 controlsPage)
+            {
+                string textBlockName = $"Slot{slot + 1}Value";
+                var textBlock = controlsPage.FindControl<TextBlock>(textBlockName);
+                if (textBlock != null)
+                {
+                    textBlock.Text = value.ToString("F2");
+                }
+            }
+            
+            UpdateTabContent();
+        }
+    }
+    
+    /// <summary>
+    /// Gets the active state of a post-process slot (for state restoration)
+    /// </summary>
+    public bool GetSlotActive(int slot) => _slotActiveStates[slot];
+    
+    /// <summary>
+    /// Gets the value of a post-process slot (for state restoration)
+    /// </summary>
+    public float GetSlotValue(int slot) => _slotValues[slot];
+    
+    // ========================================================================
+    // TEMPO/CLOCK MANAGEMENT - Global tempo tracking and display
+    // ========================================================================
+    
+    /// <summary>
+    /// Handles touchpad button click (placeholder for future functionality)
+    /// </summary>
+    private void OnTouchpadClicked(object? sender, RoutedEventArgs e)
+    {
+        LogMessage("Touchpad button clicked!");
+        Console.WriteLine("Touchpad button clicked!");
+    }
+
+    /// <summary>
+    /// Handles tempo button press - starts or stops the global tempo clock
+    /// </summary>
+    private void OnTempoButtonPressed(object? sender, RoutedEventArgs e)
+    {
+        LogMessage("=== TEMPO BUTTON CLICKED ===");
+        LogMessage($"Tempo button pressed - Current state: {(_isTempoRunning ? "Running" : "Stopped")}");
+        
+        if (_isTempoRunning)
+        {
+            StopTempo();
+        }
+        else
+        {
+            StartTempo();
+        }
+    }
+
+    /// <summary>
+    /// Handles reset button click - stops tempo and resets counter
+    /// </summary>
+    private void OnResetButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        StopTempo();
+        _globalTempoNumber.Reset();
+        LogMessage("Tempo reset");
+    }
+
+    /// <summary>
+    /// Starts the tempo - uses global timer, no separate timer needed
+    /// </summary>
+    private void StartTempo()
+    {
+        _isTempoRunning = true;
+        _tempoTickCounter = 0; // Reset counter
+        
+        // Ensure global timer is running
+        if (_globalUpdateTimer == null)
+        {
+            StartGlobalUpdateTimer();
+        }
+        
+        // Notify UI of button state changes
+        OnPropertyChanged(nameof(TempoButtonText));
+        OnPropertyChanged(nameof(TempoButtonBackground));
+        
+        LogMessage("Tempo started");
+    }
+
+    /// <summary>
+    /// Stops the tempo - no cleanup needed, just set flag
+    /// </summary>
+    private void StopTempo()
+    {
+        _isTempoRunning = false;
+        
+        // Notify UI of button state changes
+        OnPropertyChanged(nameof(TempoButtonText));
+        OnPropertyChanged(nameof(TempoButtonBackground));
+        
+        LogMessage($"Tempo stopped - Total time: {_globalTempoNumber.TimeDisplay}");
+    }
+
+    // Properties for data binding
+    public MainTempo Tempo => _globalTempoNumber;
+    public string TempoButtonText => _isTempoRunning ? "Stop Clock" : "Start Clock";
+    public string TempoButtonBackground => _isTempoRunning ? "#ff8c00" : "#d3d3d3";
+    
+    // ========================================================================
+    // UI UPDATES - Tab content and shader nodes visualization
+    // ========================================================================
+    
+    /// <summary>
+    /// Updates the content of tabs (Global, MIDI) with current information
+    /// </summary>
+    private void UpdateTabContent()
+    {
+        // Update Info tab - get current shader from the controls page
+        if (PageContentControl.Content is Page1 controlsPage)
+        {
+            var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
+            var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
+            
+            if (shaderPicker?.SelectedItem is string selectedShader && shaderInfoText != null)
+            {
+                var fullPath = System.IO.Path.Combine(_shaderDir, selectedShader);
+                var fileInfo = new FileInfo(fullPath);
+                shaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+            }
+            else if (shaderInfoText != null)
+            {
+                shaderInfoText.Text = "No shader loaded";
+            }
+        }
+
+        // Populate MIDI devices list in Global tab
+        var midiList = this.FindControl<ListBox>("MidiDevicesList");
+        if (midiList != null)
+        {
+            try
+            {
+                var names = new List<string>();
+                foreach (var device in InputDevice.GetAll())
+                {
+                    try { names.Add(device.Name); }
+                    finally { device.Dispose(); } // Ensure disposal even on exception
+                }
+
+                if (names.Count == 0)
+                {
+                    midiList.ItemsSource = new[] { "None" };
+                }
+                else
+                {
+                    midiList.ItemsSource = names.OrderBy(n => n).ToList();
+                    // auto-select first if none selected
+                    if (midiList.SelectedIndex < 0)
+                        midiList.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                midiList.ItemsSource = new[] { $"Error: {ex.Message}" };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Starts the centralized global update timer
+    /// All periodic updates use this single timer to prevent thread leaks and improve efficiency
+    /// </summary>
+    private void StartGlobalUpdateTimer()
+    {
+        if (_globalUpdateTimer != null) return; // Already running
+        
+        _globalUpdateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(GLOBAL_TIMER_INTERVAL_MS)
+        };
+        
+        _globalUpdateTimer.Tick += (_, __) => {
+            try
+            {
+                // Execute all registered callbacks
+                foreach (var callback in _timerCallbacks)
+                {
+                    try
+                    {
+                        callback();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Timer callback error: {ex.Message}");
+                    }
+                }
+                
+                // Handle tempo updates (every 10 ticks = 1 second)
+                if (_isTempoRunning)
+                {
+                    _tempoTickCounter++;
+                    if (_tempoTickCounter >= TEMPO_TICKS_PER_SECOND)
+                    {
+                        _tempoTickCounter = 0;
+                        _globalTempoNumber.Increment();
+                        LogMessage($"Global Tempo: {_globalTempoNumber.TimeDisplay} (Seconds: {_globalTempoNumber.Seconds})");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Global timer error: {ex.Message}");
+            }
+        };
+        
+        // Register shader nodes visualization update (runs every tick = 10 times per second)
+        RegisterTimerCallback(UpdateShaderNodesVisualization);
+        
+        _globalUpdateTimer.Start();
+        System.Diagnostics.Debug.WriteLine("Global update timer started");
+    }
+
+    /// <summary>
+    /// Stops the global update timer and cleans up all callbacks
+    /// </summary>
+    private void StopGlobalUpdateTimer()
+    {
+        if (_globalUpdateTimer != null)
+        {
+            _globalUpdateTimer.Stop();
+            _globalUpdateTimer = null;
+        }
+        
+        _timerCallbacks.Clear();
+        _tempoTickCounter = 0;
+        System.Diagnostics.Debug.WriteLine("Global update timer stopped and cleaned up");
+    }
+    
+    /// <summary>
+    /// Registers a callback to be executed on each timer tick
+    /// </summary>
+    private void RegisterTimerCallback(Action callback)
+    {
+        if (callback != null && !_timerCallbacks.Contains(callback))
+        {
+            _timerCallbacks.Add(callback);
+        }
+    }
+    
+    /// <summary>
+    /// Unregisters a callback from the timer
+    /// </summary>
+    private void UnregisterTimerCallback(Action callback)
+    {
+        _timerCallbacks.Remove(callback);
+    }
+
+    /// <summary>
+    /// Wires up click handlers for processing node rectangles and value change handlers for sliders
+    /// </summary>
+    private void WireUpProcessingNodeControls()
+    {
+        if (Surface == null) 
+        {
+            System.Diagnostics.Debug.WriteLine("WireUpProcessingNodeControls: Surface is null");
+            return;
+        }
+        
+        try
+        {
+            // Wire up all 6 VFX processing nodes (0-5)
+            for (int i = 0; i < 6; i++)
+            {
+                int slotIndex = i; // Capture for closure
+                
+                // Wire up rectangle border click to toggle active state
+                try
+                {
+                    var rectButton = this.FindControl<Border>($"Node{i + 1}RectButton");
+                    if (rectButton != null)
+                    {
+                        // Remove any existing handlers first to avoid duplicates
+                        rectButton.PointerPressed -= null; // This doesn't work, but we'll add the handler
+                        
+                        rectButton.PointerPressed += (s, e) => {
+                            try
+                            {
+                                e.Handled = true; // Mark as handled
+                                if (Surface != null)
+                                {
+                                    // Allow toggling even if shader not loaded (for UI feedback)
+                                    bool currentState = Surface.GetSlotActive(slotIndex);
+                                    Surface.SetSlotActive(slotIndex, !currentState);
+                                    System.Diagnostics.Debug.WriteLine($"Toggled node {slotIndex} to {!currentState}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error toggling node {slotIndex}: {ex.Message}");
+                            }
+                        };
+                        
+                        // Also make sure it's hit-testable and visible
+                        rectButton.IsHitTestVisible = true;
+                        rectButton.IsVisible = true;
+                        System.Diagnostics.Debug.WriteLine($"Wired up Node{i + 1}RectButton - IsHitTestVisible: {rectButton.IsHitTestVisible}, IsVisible: {rectButton.IsVisible}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Node{i + 1}RectButton not found!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error finding Node{i + 1}RectButton: {ex.Message}");
+                }
+                
+                // Wire up slider value changes
+                try
+                {
+                    var slider = this.FindControl<Slider>($"Node{i + 1}Slider");
+                    var valueText = this.FindControl<TextBlock>($"Node{i + 1}Value");
+                    if (slider != null)
+                    {
+                        slider.ValueChanged += (_, e) => {
+                            try
+                            {
+                                if (Surface != null && e.NewValue is double value)
+                                {
+                                    float floatValue = (float)value;
+                                    Surface.SetSlotValue(slotIndex, floatValue);
+                                    
+                                    // Update the value display immediately for real-time feedback
+                                    if (valueText != null)
+                                    {
+                                        valueText.Text = floatValue.ToString("F2");
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error setting node {slotIndex} value: {ex.Message}");
+                            }
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error finding Node{i + 1}Slider: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in WireUpProcessingNodeControls: {ex.Message}\n{ex.StackTrace}");
+            throw; // Re-throw to be caught by caller
+        }
+    }
+    
+    /// <summary>
+    /// Updates the shader nodes visualization in the Global tab
+    /// Shows the processing pipeline as layers: Main Shader -> Processing nodes
+    /// Reads directly from runtime shader state (IsMainShaderLoaded, GetSlotActive, etc.)
+    /// Shows/hides subrows with sliders when nodes are active
+    /// </summary>
+    private void UpdateShaderNodesVisualization()
+    {
+        if (Surface == null) return;
+
+        // Node 0: Main Shader (Global Texture)
+        var node0Border = this.FindControl<Border>("Node0Border");
+        var node0Rect = this.FindControl<Avalonia.Controls.Shapes.Rectangle>("Node0Rect");
+        var node0Text = this.FindControl<TextBlock>("Node0Text");
+        
+        bool isMainShaderLoaded = Surface.IsMainShaderLoaded;
+        
+        // Update Node 0 visualization
+        if (node0Rect != null)
+        {
+            node0Rect.Fill = isMainShaderLoaded
+                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
+                : Avalonia.Media.SolidColorBrush.Parse("#666666");
+        }
+        if (node0Text != null)
+        {
+            node0Text.Text = isMainShaderLoaded 
+                ? "Label 0: Global Texture" 
+                : "Label 0: Global Texture (No Shader)";
+        }
+        if (node0Border != null)
+        {
+            node0Border.BorderBrush = isMainShaderLoaded
+                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
+                : Avalonia.Media.SolidColorBrush.Parse("#666666");
+        }
+
+        // Track previous layer state for arrow visibility
+        bool previousLayerActive = isMainShaderLoaded;
+        
+        // Update all 6 VFX processing nodes
+        // Always show all nodes, but indicate their state (loaded/unloaded, active/inactive)
+        for (int i = 0; i < 6; i++)
+        {
+            var nodeRectButton = this.FindControl<Border>($"Node{i + 1}RectButton");
+            var nodeRect = this.FindControl<Avalonia.Controls.Shapes.Rectangle>($"Node{i + 1}Rect");
+            var nodeBorder = this.FindControl<Border>($"Node{i + 1}Border");
+            var nodeText = this.FindControl<TextBlock>($"Node{i + 1}Text");
+            var nodeArrow = this.FindControl<Avalonia.Controls.Shapes.Path>($"Node{i + 1}Arrow");
+            var nodeSubrow = this.FindControl<Border>($"Node{i + 1}Subrow");
+            var nodeSlider = this.FindControl<Slider>($"Node{i + 1}Slider");
+            var nodeValue = this.FindControl<TextBlock>($"Node{i + 1}Value");
+            
+            bool isShaderLoaded = Surface.IsProcessingNodeShaderLoaded(i);
+            bool isSlotActive = Surface.GetSlotActive(i);
+            string shaderName = Surface.GetProcessingNodeShaderName(i);
+            float slotValue = Surface.GetSlotValue(i);
+            
+            // Always show all nodes - they should be visible regardless of loaded state
+            bool shouldShow = true;
+            
+            // Update rectangle color based on loaded and active state
+            var rectColor = isShaderLoaded && isSlotActive
+                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
+                : isShaderLoaded
+                    ? Avalonia.Media.SolidColorBrush.Parse("#888888") // Loaded but inactive
+                    : Avalonia.Media.SolidColorBrush.Parse("#666666"); // Not loaded
+            
+            if (nodeRect != null)
+            {
+                nodeRect.Fill = rectColor;
+            }
+            if (nodeBorder != null)
+            {
+                nodeBorder.BorderBrush = isShaderLoaded && isSlotActive
+                    ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
+                    : isShaderLoaded
+                        ? Avalonia.Media.SolidColorBrush.Parse("#888888")
+                        : Avalonia.Media.SolidColorBrush.Parse("#666666");
+                nodeBorder.IsVisible = shouldShow; // Always visible
+            }
+            if (nodeText != null)
+            {
+                // Show node name, or "Not Available" if no shader name
+                string displayName = !string.IsNullOrEmpty(shaderName) ? shaderName : $"Processing Node {i + 1}";
+                nodeText.Text = $"Label {i + 1}: {displayName}";
+            }
+            if (nodeArrow != null)
+            {
+                // Show arrow if previous layer is active and current layer is loaded
+                bool showArrow = previousLayerActive && isShaderLoaded;
+                nodeArrow.IsVisible = showArrow;
+                nodeArrow.Stroke = (showArrow && isSlotActive)
+                    ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00")
+                    : Avalonia.Media.SolidColorBrush.Parse("#666666");
+            }
+            
+            // Show/hide subrow (slider and value) when node is loaded and active
+            if (nodeSubrow != null)
+            {
+                nodeSubrow.IsVisible = isShaderLoaded && isSlotActive;
+            }
+            
+            // Update slider and value display
+            if (nodeSlider != null && isShaderLoaded && isSlotActive)
+            {
+                // Only update if value changed to avoid feedback loop
+                if (Math.Abs(nodeSlider.Value - slotValue) > 0.001)
+                {
+                    nodeSlider.Value = slotValue;
+                }
+            }
+            if (nodeValue != null && isShaderLoaded && isSlotActive)
+            {
+                nodeValue.Text = slotValue.ToString("F2");
+            }
+            
+            // Update previous layer state for next iteration
+            previousLayerActive = isShaderLoaded && isSlotActive;
+        }
+    }
+    
+    // ========================================================================
+    // PAGE NAVIGATION - Multi-page UI management
+    // ========================================================================
+    
+    /// <summary>
+    /// Switches to the specified page number (1-4)
+    /// </summary>
     private void SwitchToPage(int pageNumber)
     {
         switch (pageNumber)
@@ -528,7 +1000,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             case 1:
                 var controlsPage = new Page1();
                 PageContentControl.Content = controlsPage;
-                WireUpLivePage(controlsPage);
+                Page1_WireUp(controlsPage);
                 PopulatePicker(controlsPage);
                 LogMessage("Switched to Controls page");
                 break;
@@ -552,7 +1024,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private void WireUpLivePage(Page1 page)
+    /// <summary>
+    /// Wires up event handlers for Page1 (Controls page) - shader selection, tempo, slots
+    /// </summary>
+    private void Page1_WireUp(Page1 page)
     {
         // Find controls and wire up events
         var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
@@ -564,7 +1039,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             shaderPicker.SelectionChanged += (_, __) => {
                 if (shaderPicker.SelectedItem is string filename) {
-                    var fullPath = Path.Combine(_shaderDir, filename);
+                    var fullPath = System.IO.Path.Combine(_shaderDir, filename);
                     if (File.Exists(fullPath)) {
                         Surface.LoadFragmentShaderFromFile(fullPath, out var message);
                         UpdateTabContent();
@@ -606,6 +1081,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (slot3Slider != null) slot3Slider.ValueChanged += OnSlot3ValueChanged;
     }
     
+    /// <summary>
+    /// Wires up event handlers for Page2 (Tools page) - directory browsing
+    /// </summary>
     private void WireUpToolsPage(Page2 page)
     {
         var browseButton = page.FindControl<Button>("BrowseButton");
@@ -703,7 +1181,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     var folderName = selectedItem.Substring(5).Trim();
                     
                     // Build new path
-                    var newPath = Path.Combine(_currentDirectoryPath, folderName);
+                    var newPath = System.IO.Path.Combine(_currentDirectoryPath, folderName);
                     
                     // Update TextBox
                     directoryPathTextBox.Text = newPath;
@@ -758,8 +1236,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             };
         }
     }
-
-
+    
+    // ========================================================================
+    // DIRECTORY BROWSING - File system navigation utilities
+    // ========================================================================
+    
+    /// <summary>
+    /// Browses and loads a directory into the directory list box
+    /// </summary>
     private void BrowseDirectory(ListBox directoryListBox, TextBox? directoryPathTextBox)
     {
         try
@@ -804,6 +1288,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
+    /// <summary>
+    /// Loads directory contents into the list box (directories and files)
+    /// </summary>
     private void LoadDirectoryContents(string directoryPath, ListBox directoryListBox)
     {
         try
@@ -821,14 +1308,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
             // Get directories first
             var directories = Directory.GetDirectories(directoryPath)
-                .Select(Path.GetFileName)
+                .Select(System.IO.Path.GetFileName)
                 .OrderBy(name => name)
                 .Select(name => $"[DIR] {name}")
                 .ToList();
 
             // Get files
             var files = Directory.GetFiles(directoryPath)
-                .Select(Path.GetFileName)
+                .Select(System.IO.Path.GetFileName)
                 .Where(name => !string.IsNullOrEmpty(name))
                 .Select(name => name!)
                 .OrderBy(name => name)
@@ -852,6 +1339,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
     
+    /// <summary>
+    /// Filters the directory list based on search text (case-insensitive)
+    /// </summary>
     private void FilterDirectoryList(ListBox directoryListBox, string filterText)
     {
         try
@@ -885,26 +1375,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private string GetFileIcon(string fileName)
-    {
-        if (string.IsNullOrEmpty(fileName))
-            return "📄";
-            
-        var extension = Path.GetExtension(fileName).ToLower();
-        return extension switch
-        {
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => "🖼️",
-            ".mp4" or ".avi" or ".mov" or ".mkv" or ".wmv" => "🎥",
-            ".mp3" or ".wav" or ".flac" or ".aac" => "🎵",
-            ".pdf" => "📄",
-            ".doc" or ".docx" => "📝",
-            ".txt" => "📄",
-            ".zip" or ".rar" or ".7z" => "📦",
-            ".exe" => "⚙️",
-            _ => "📄"
-        };
-    }
 
+    
+    // ========================================================================
+    // MIDI DEVICE MANAGEMENT - MIDI input device handling
+    // ========================================================================
+    
+    /// <summary>
+    /// Handles MIDI device selection from the dropdown list
+    /// </summary>
     private void OnMidiDeviceSelected(object? sender, SelectionChangedEventArgs e)
     {
         var list = sender as ListBox;
@@ -913,11 +1392,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         TryOpenMidiDevice(name);
     }
 
+    /// <summary>
+    /// Attempts to open a MIDI input device by name
+    /// Safely disposes previous device before opening new one
+    /// </summary>
     private void TryOpenMidiDevice(string name)
     {
         try
         {
-            // Close previous
+            // Close previous device safely
             if (_activeMidiDevice != null)
             {
                 _activeMidiDevice.EventReceived -= OnMidiEventReceived;
@@ -946,6 +1429,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
+    /// <summary>
+    /// Handles MIDI events received from the active input device
+    /// Thread-safe: Uses Dispatcher to update UI from MIDI thread
+    /// Filters out noisy real-time messages
+    /// </summary>
     private void OnMidiEventReceived(object? sender, MidiEventReceivedEventArgs e)
     {
         try
@@ -963,7 +1451,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 {
                     _midiInEvents.Add(msg);
                     
-                    // Keep only last 50 messages
+                    // Keep only last 50 messages to prevent memory issues
                     while (_midiInEvents.Count > 50)
                         _midiInEvents.RemoveAt(0);
                     
@@ -978,16 +1466,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 }
                 catch
                 {
-                    // If UI update fails, just skip this message
+                    // If UI update fails, just skip this message (fail gracefully)
                 }
             }, DispatcherPriority.Background);
         }
         catch
         {
-            // Swallow exceptions from MIDI thread
+            // Swallow exceptions from MIDI thread to prevent crashes
         }
     }
 
+    /// <summary>
+    /// Formats a MIDI event as a human-readable string with timestamp
+    /// </summary>
     private static string FormatMidiEvent(Melanchall.DryWetMidi.Core.MidiEvent ev)
     {
         string ts = DateTime.Now.ToString("HH:mm:ss.fff");
@@ -1015,10 +1506,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             return $"[{ts}] Aftertouch ch {(int)ca.Channel + 1} val {ca.AftertouchValue}";
         }
-        // Fallback
+        // Fallback for unknown event types
         return $"[{ts}] {ev.GetType().Name}";
     }
-
+    
+    // ========================================================================
+    // CHILD WINDOW MANAGEMENT - Floating tempo display window
+    // ========================================================================
+    
+    /// <summary>
+    /// Opens or activates the child window for tempo display
+    /// Reuses existing window if available, creates new one if needed
+    /// </summary>
     private void OpenChildWindow()
     {
         // If window already exists and is open, bring it to front
@@ -1048,4 +1547,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             LogMessage("Child window opened");
         }
     }
+    
+    // ========================================================================
+    // PROPERTY CHANGE NOTIFICATION - INotifyPropertyChanged implementation
+    // ========================================================================
+    
+    /// <summary>
+    /// Raises the PropertyChanged event for data binding updates
+    /// </summary>
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
+
+

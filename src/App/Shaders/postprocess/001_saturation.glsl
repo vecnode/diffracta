@@ -12,8 +12,9 @@ void main() {
     // Convert to grayscale
     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
     
-    // Mix between grayscale and original color based on saturation
-    vec3 saturated = mix(vec3(gray), color.rgb, u_saturation);
+    // Mix between original color and grayscale based on saturation
+    // 0 = full color (saturated), 1 = grayscale (no saturation)
+    vec3 saturated = mix(color.rgb, vec3(gray), u_saturation);
     
     FragColor = vec4(saturated, color.a);
 }

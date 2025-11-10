@@ -4,12 +4,34 @@ using System.Runtime.InteropServices;
 
 namespace Diffracta.Graphics;
 
+// ========================
+// GLLoader - OpenGL Function Wrapper
+// ========================
+// This class provides a type-safe wrapper around OpenGL functions accessed through Avalonia's GlInterface.
+// It dynamically loads OpenGL function pointers at runtime and provides delegates for calling them.
+// This approach is necessary because OpenGL functions are platform-specific and loaded dynamically.
 internal sealed class GLLoader
 {
-    private readonly GlInterface _gl;
+    // ========================
+    // Fields
+    // ========================
+    private readonly GlInterface _gl; // Avalonia's OpenGL interface for accessing function pointers
 
+    // ========================
+    // Constructor
+    // ========================
     public GLLoader(GlInterface gl) { _gl = gl; }
 
+    // ========================
+    // Helper Methods
+    // ========================
+    /// <summary>
+    /// Dynamically loads an OpenGL function by name and converts it to a typed delegate.
+    /// Throws an exception if the function is not found (OpenGL function not available).
+    /// </summary>
+    /// <typeparam name="T">The delegate type matching the OpenGL function signature</typeparam>
+    /// <param name="name">The name of the OpenGL function (e.g., "glViewport")</param>
+    /// <returns>A delegate that can be called to invoke the OpenGL function</returns>
     private T Load<T>(string name) where T : Delegate
     {
         var ptr = _gl.GetProcAddress(name);
@@ -17,11 +39,18 @@ internal sealed class GLLoader
         return Marshal.GetDelegateForFunctionPointer<T>(ptr);
     }
 
-    // --- Delegates ---
+    // ========================
+    // OpenGL Function Delegates
+    // ========================
+    // These delegates define the function signatures for OpenGL calls.
+    // All use Cdecl calling convention as required by OpenGL.
+    
+    // Viewport and Clear Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glViewport_d(int x,int y,int w,int h);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glClearColor_d(float r,float g,float b,float a);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glClear_d(uint mask);
 
+    // Shader Compilation and Program Management
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate uint glCreateShader_d(uint type);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glShaderSource_d(uint shader, int count, string[] strings, int[] lengths);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glCompileShader_d(uint shader);
@@ -38,10 +67,12 @@ internal sealed class GLLoader
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glUniform1f_d(int loc, float v0);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glUniform2f_d(int loc, float v0, float v1);
 
+    // Vertex Array Object (VAO) Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenVertexArrays_d(int n, out uint arrays);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindVertexArray_d(uint array);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDrawArrays_d(uint mode, int first, int count);
 
+    // Vertex Buffer Object (VBO) Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenBuffers_d(int n, out uint buffers);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindBuffer_d(uint target, uint buffer);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBufferData_d(uint target, int size, float[] data, uint usage);
@@ -51,7 +82,7 @@ internal sealed class GLLoader
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteVertexArrays_d(int n, ref uint arrays);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteProgram_d(uint program);
 
-    // Texture and Framebuffer functions
+    // Texture Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenTextures_d(int n, out uint textures);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindTexture_d(uint target, uint texture);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glTexImage2D_d(uint target, int level, int internalformat, int width, int height, int border, uint format, uint type, IntPtr pixels);
@@ -60,24 +91,34 @@ internal sealed class GLLoader
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glActiveTexture_d(uint texture);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glUniform1i_d(int location, int value);
 
+    // Framebuffer Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glGenFramebuffers_d(int n, out uint framebuffers);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glBindFramebuffer_d(uint target, uint framebuffer);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glFramebufferTexture2D_d(uint target, uint attachment, uint textarget, uint texture, int level);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate uint glCheckFramebufferStatus_d(uint target);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteFramebuffers_d(int n, ref uint framebuffers);
 
-    // --- Constants ---
+    // ========================
+    // OpenGL Constants
+    // ========================
+    // These constants match OpenGL enum values and are used throughout the rendering code.
+    
+    // Buffer and Clear Constants
     public const uint GL_COLOR_BUFFER_BIT = 0x00004000;
+    
+    // Shader Type Constants
     public const uint GL_FRAGMENT_SHADER  = 0x8B30;
     public const uint GL_VERTEX_SHADER    = 0x8B31;
     public const uint GL_COMPILE_STATUS   = 0x8B81;
     public const uint GL_LINK_STATUS      = 0x8B82;
+    
+    // Drawing Constants
     public const uint GL_TRIANGLES        = 0x0004;
     public const uint GL_ARRAY_BUFFER     = 0x8892;
     public const uint GL_STATIC_DRAW      = 0x88E4;
     public const uint GL_FLOAT           = 0x1406;
 
-    // Texture constants
+    // Texture Constants
     public const uint GL_TEXTURE_2D       = 0x0DE1;
     public const uint GL_TEXTURE0         = 0x84C0;
     public const uint GL_RGBA             = 0x1908;
@@ -86,16 +127,23 @@ internal sealed class GLLoader
     public const uint GL_TEXTURE_MAG_FILTER = 0x2800;
     public const uint GL_LINEAR           = 0x2601;
 
-    // Framebuffer constants
+    // Framebuffer Constants
     public const uint GL_FRAMEBUFFER      = 0x8D40;
     public const uint GL_COLOR_ATTACHMENT0 = 0x8CE0;
     public const uint GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 
-    // --- Loaded funcs ---
+    // ========================
+    // Loaded Function Pointers
+    // ========================
+    // These fields hold the actual function delegates loaded at runtime.
+    // They are initialized by the Initialize() method and used throughout the rendering code.
+    
+    // Viewport and Clear
     public glViewport_d glViewport = null!;
     public glClearColor_d glClearColor = null!;
     public glClear_d glClear = null!;
 
+    // Shader and Program Management
     public glCreateShader_d glCreateShader = null!;
     public glShaderSource_d glShaderSource = null!;
     public glCompileShader_d glCompileShader = null!;
@@ -112,10 +160,12 @@ internal sealed class GLLoader
     public glUniform1f_d glUniform1f = null!;
     public glUniform2f_d glUniform2f = null!;
 
+    // Vertex Array Operations
     public glGenVertexArrays_d glGenVertexArrays = null!;
     public glBindVertexArray_d glBindVertexArray = null!;
     public glDrawArrays_d glDrawArrays = null!;
 
+    // Buffer Operations
     public glGenBuffers_d glGenBuffers = null!;
     public glBindBuffer_d glBindBuffer = null!;
     public glBufferData_d glBufferData = null!;
@@ -125,7 +175,7 @@ internal sealed class GLLoader
     public glDeleteVertexArrays_d glDeleteVertexArrays = null!;
     public glDeleteProgram_d glDeleteProgram = null!;
 
-    // Texture and Framebuffer functions
+    // Texture Operations
     public glGenTextures_d glGenTextures = null!;
     public glBindTexture_d glBindTexture = null!;
     public glTexImage2D_d glTexImage2D = null!;
@@ -134,21 +184,31 @@ internal sealed class GLLoader
     public glActiveTexture_d glActiveTexture = null!;
     public glUniform1i_d glUniform1i = null!;
 
+    // Framebuffer Operations
     public glGenFramebuffers_d glGenFramebuffers = null!;
     public glBindFramebuffer_d glBindFramebuffer = null!;
     public glFramebufferTexture2D_d glFramebufferTexture2D = null!;
     public glCheckFramebufferStatus_d glCheckFramebufferStatus = null!;
     public glDeleteFramebuffers_d glDeleteFramebuffers = null!;
 
+    // ========================
+    // Initialization
+    // ========================
+    /// <summary>
+    /// Loads all OpenGL function pointers at runtime.
+    /// This must be called before any OpenGL operations can be performed.
+    /// Throws an exception if any required function cannot be loaded.
+    /// </summary>
     public void Initialize()
     {
         try
         {
-            // Resolve everything we use
+            // Load viewport and clear functions
             glViewport = Load<glViewport_d>("glViewport");
             glClearColor = Load<glClearColor_d>("glClearColor");
             glClear = Load<glClear_d>("glClear");
 
+            // Load shader compilation and program management functions
             glCreateShader = Load<glCreateShader_d>("glCreateShader");
             glShaderSource = Load<glShaderSource_d>("glShaderSource");
             glCompileShader = Load<glCompileShader_d>("glCompileShader");
@@ -165,10 +225,12 @@ internal sealed class GLLoader
             glUniform1f = Load<glUniform1f_d>("glUniform1f");
             glUniform2f = Load<glUniform2f_d>("glUniform2f");
 
+            // Load vertex array object functions
             glGenVertexArrays = Load<glGenVertexArrays_d>("glGenVertexArrays");
             glBindVertexArray = Load<glBindVertexArray_d>("glBindVertexArray");
             glDrawArrays = Load<glDrawArrays_d>("glDrawArrays");
 
+            // Load buffer management functions
             glGenBuffers = Load<glGenBuffers_d>("glGenBuffers");
             glBindBuffer = Load<glBindBuffer_d>("glBindBuffer");
             glBufferData = Load<glBufferData_d>("glBufferData");
