@@ -53,9 +53,14 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Selected Shader:" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Text="Select Media:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
 
                 <local:Utils_ComboBox x:Name="ShaderPicker" Width="200" Background="#2d2d2d"/>
+                
+ 
+                <TextBlock Text="Select Slot:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
+
+                <local:Utils_ComboBox x:Name="SlotPicker" Width="100" Background="#2d2d2d"/>
                 
             </StackPanel>
         </StackPanel>

@@ -237,6 +237,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     shaderPicker.SelectedIndex = 0;
                 }
             }
+            
+            // Populate pad picker with pad names (P01-P32)
+            var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
+            if (slotPicker != null) {
+                var slotNames = Enumerable.Range(1, 32)
+                    .Select(i => $"S{i:D2}")
+                    .ToList();
+                slotPicker.ItemsSource = slotNames;
+                if (slotNames.Count > 0) {
+                    slotPicker.SelectedIndex = 0;
+                }
+            }
         }
     }
 
