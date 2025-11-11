@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Diffracta"
+             x:Class="Diffracta.Utils_ComboBox">
+    
+    <UserControl.Styles>
+        <!-- ComboBox styling - grey background, white text -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+        
+        <!-- ComboBox hover state -->
+        <Style Selector="ComboBox:pointerover">
+            <Setter Property="Background" Value="#3d3d3d"/>
+        </Style>
+        
+        <!-- ComboBox pressed state -->
+        <Style Selector="ComboBox:pressed">
+            <Setter Property="Background" Value="#2d2d2d"/>
+        </Style>
+        
+        <!-- ComboBox ContentPresenter (the text display area) -->
+        <Style Selector="ComboBox > ContentPresenter">
+            <Setter Property="Background" Value="#1c1c1c"/>
+            <Setter Property="Foreground" Value="#3c3c3c"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        
+        <!-- ComboBox Button (the dropdown arrow button) -->
+        <Style Selector="ComboBox > Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        
+        <!-- ComboBox Button hover -->
+        <Style Selector="ComboBox > Button:pointerover">
+            <Setter Property="Background" Value="#3d3d3d"/>
+        </Style>
+        
+        <!-- ComboBox items -->
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Background" Value="#1c1c1c"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        
+        <!-- ComboBoxItem ContentPresenter to remove any default spacing -->
+        <Style Selector="ComboBoxItem > ContentPresenter">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="#1c1c1c"/>
+        </Style>
+        
+        <!-- ComboBoxItem hover - lighter than parent panel -->
+        <Style Selector="ComboBoxItem:pointerover">
+            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <!-- ComboBoxItem hover - style any Border inside -->
+        <Style Selector="ComboBoxItem:pointerover > Border">
+            <Setter Property="Background" Value="#2d2d2d"/>
+        </Style>
+        
+        <!-- ComboBoxItem hover - style ContentPresenter inside -->
+        <Style Selector="ComboBoxItem:pointerover > ContentPresenter">
+            <Setter Property="Background" Value="#2d2d2d"/>
+        </Style>
+        
+        <!-- ComboBoxItem selected -->
+        <Style Selector="ComboBoxItem:selected">
+            <Setter Property="Background" Value="#1c1c1c"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <!-- Popup container styles - fallback in case code-behind doesn't catch everything -->
+        <!-- Note: Code-behind in Utils_ComboBox.axaml.cs handles PopupBorder styling -->
+        <Style Selector="ComboBox Popup ScrollViewer">
+            <Setter Property="Background" Value="#1c1c1c"/>
+        </Style>
+        
+        <Style Selector="ComboBox Popup Panel">
+            <Setter Property="Background" Value="#1c1c1c"/>
+        </Style>
+    </UserControl.Styles>
+    
+    <ComboBox x:Name="ComboBoxControl">
+        <ComboBox.ItemTemplate>
+            <DataTemplate>
+                <TextBlock Text="{Binding}" Foreground="White"/>
+            </DataTemplate>
+        </ComboBox.ItemTemplate>
+    </ComboBox>
+</UserControl>

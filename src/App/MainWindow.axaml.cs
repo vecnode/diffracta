@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -44,7 +45,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private bool _isTempoRunning = false;
     
     // Child window management
-    private ChildWindow? _childWindow;
+    private ChildWindow1? _childWindow1;
+    private ChildWindow2? _childWindow2;
     
     // ========================================================================
     // CENTRALIZED TIMER MANAGEMENT - Single timer for all periodic updates
@@ -105,8 +107,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 
                 SetupWatcher();
                 UpdateTabContent();
-                LogMessage("Ready - Select a shader from the dropdown");
-
+                
                 // Wire MIDI UI when available
                 var midiInList = this.FindControl<ListBox>("MidiInEventsList");
                 if (midiInList != null) midiInList.ItemsSource = _midiInEvents;
@@ -119,7 +120,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 // Wire up processing node controls (clickable rectangles and sliders)
                 try
                 {
-                    WireUpProcessingNodeControls();
+                    // Wire up processing node controls via the UserControl
+                    var nodesListBox = this.FindControl<Utils_NodesListBox>("NodesListBox");
+                    if (nodesListBox != null)
+                    {
+                        nodesListBox.Surface = Surface;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -129,6 +135,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 
                 // Initialize with controls page
                 SwitchToPage(1);
+                
+                // Auto-load default shader after page is loaded
+                var defaultShader = "001_organic_noise_1.glsl";
+                var defaultShaderPath = System.IO.Path.Combine(_shaderDir, defaultShader);
+                if (File.Exists(defaultShaderPath) && Surface != null)
+                {
+                    Surface.LoadFragmentShaderFromFile(defaultShaderPath, out var message);
+                    LogMessage($"Auto-loaded default shader: {defaultShader}");
+                    
+                }
+                else if (!File.Exists(defaultShaderPath))
+                {
+                    LogMessage($"Default shader not found: {defaultShaderPath}");
+                }
+                
+                LogMessage("Ready - Select a shader from the dropdown");
             }
             catch (Exception ex)
             {
@@ -181,8 +203,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Page3Button.Click += (_, __) => SwitchToPage(3);
         Page4Button.Click += (_, __) => SwitchToPage(4);
 
-        // Child window menu item
-        ChildWindowMenuItem.Click += (_, __) => OpenChildWindow();
+        // Child window menu items
+        ChildWindow1MenuItem.Click += (_, __) => ToggleChildWindow1();
+        ChildWindow2MenuItem.Click += (_, __) => ToggleChildWindow2();
 
         // Handle Escape key to exit performance mode
         KeyDown += (_, e) => {
@@ -207,7 +230,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             .ToList();
 
         if (page != null) {
-            var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
+            var shaderPicker = page.FindControl<Utils_ComboBox>("ShaderPicker");
             if (shaderPicker != null) {
                 shaderPicker.ItemsSource = items;
                 if (items.Count > 0) {
@@ -406,21 +429,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         LeftSidebar.IsVisible = false;
         TopToolbar.IsVisible = false;
         ControlsPanel.IsVisible = false;
-        BottomRightPanel.IsVisible = false;
         VerticalSplitter.IsVisible = false;
         HorizontalSplitter.IsVisible = false;
+        
+        // Make TopRightPanel span the entire viewport and hide the tabbed panel
+        TopRightPanel.SetValue(Grid.RowProperty, 0);
+        TopRightPanel.SetValue(Grid.ColumnProperty, 0);
+        TopRightPanel.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows
+        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 3);
+        
+        // Hide the tabbed panel part (row 2) and splitter (row 1), show only shader surface (row 0)
+        // We'll do this by making the shader surface row take all space
+        var topRightGrid = TopRightPanel as Grid;
+        if (topRightGrid != null && topRightGrid.RowDefinitions.Count >= 3)
+        {
+            topRightGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+            topRightGrid.RowDefinitions[1].Height = new GridLength(0);
+            topRightGrid.RowDefinitions[2].Height = new GridLength(0);
+        }
+        
+        // Make the shader surface fill the available space
+        // Surface is inside: innerBorder -> outerBorder -> Grid
+        var innerBorder = Surface.Parent as Border;
+        if (innerBorder != null)
+        {
+            innerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            innerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+            innerBorder.Width = double.NaN;
+            innerBorder.Height = double.NaN;
+            
+            var outerBorder = innerBorder.Parent as Border;
+            if (outerBorder != null)
+            {
+                outerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+                outerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+                outerBorder.Padding = new Thickness(0);
+                outerBorder.Margin = new Thickness(0);
+            }
+        }
+        Surface.Width = double.NaN;
+        Surface.Height = double.NaN;
+        Surface.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        Surface.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
         
         // Go fullscreen for Performance mode to use full viewport
         WindowState = WindowState.FullScreen;
         
         // Hide mouse cursor in performance mode
         Cursor = Avalonia.Input.Cursor.Parse("None");
-        
-        // Make the shader surface span the entire viewport
-        Surface.SetValue(Grid.RowProperty, 0);
-        Surface.SetValue(Grid.ColumnProperty, 0);
-        Surface.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows (menu, toolbar, shader, bottom)
-        Surface.SetValue(Grid.ColumnSpanProperty, 3);
         
         LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
         UpdateTabContent();
@@ -439,20 +495,52 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Restore mouse cursor
         Cursor = Avalonia.Input.Cursor.Parse("Arrow");
         
+        // Restore TopRightPanel to normal position
+        TopRightPanel.SetValue(Grid.RowProperty, 2);
+        TopRightPanel.SetValue(Grid.ColumnProperty, 2);
+        TopRightPanel.SetValue(Grid.RowSpanProperty, 2);
+        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 1);
+        
+        // Restore the grid row definitions
+        var topRightGrid = TopRightPanel as Grid;
+        if (topRightGrid != null && topRightGrid.RowDefinitions.Count >= 3)
+        {
+            topRightGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+            topRightGrid.RowDefinitions[1].Height = new GridLength(3);
+            topRightGrid.RowDefinitions[2].Height = new GridLength(3, GridUnitType.Star);
+        }
+        
+        // Restore shader surface to original size and position
+        // Surface is inside: innerBorder -> outerBorder -> Grid
+        var innerBorder = Surface.Parent as Border;
+        if (innerBorder != null)
+        {
+            innerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+            innerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+            innerBorder.Width = 202;
+            innerBorder.Height = 114;
+            
+            var outerBorder = innerBorder.Parent as Border;
+            if (outerBorder != null)
+            {
+                outerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+                outerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+                outerBorder.Padding = new Thickness(6);
+                outerBorder.Margin = new Thickness(0, 0, 0, 2);
+            }
+        }
+        Surface.Width = 200;
+        Surface.Height = 112;
+        Surface.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        Surface.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+        
         // Show all panels again
         MenuBar.IsVisible = true;
         LeftSidebar.IsVisible = true;
         TopToolbar.IsVisible = true;
         ControlsPanel.IsVisible = true;
-        BottomRightPanel.IsVisible = true;
         VerticalSplitter.IsVisible = true;
         HorizontalSplitter.IsVisible = true;
-        
-        // Restore normal layout (shader in top-right quadrant)
-        Surface.SetValue(Grid.RowProperty, 2); // Now row 2 (after menu and toolbar)
-        Surface.SetValue(Grid.ColumnProperty, 2);
-        Surface.SetValue(Grid.RowSpanProperty, 1);
-        Surface.SetValue(Grid.ColumnSpanProperty, 1);
         
         LogMessage("Exited performance mode");
         UpdateTabContent();
@@ -493,6 +581,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     Avalonia.Media.SolidColorBrush.Parse("#ff8c00") : Avalonia.Media.SolidColorBrush.Parse("#d3d3d3");
             }
             
+            // Sync Child Window 2 if open
+            SyncChildWindow2();
+            
             UpdateTabContent();
         }
     }
@@ -518,6 +609,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     textBlock.Text = value.ToString("F2");
                 }
             }
+            
+            // Sync Child Window 2 if open
+            SyncChildWindow2();
             
             UpdateTabContent();
         }
@@ -626,7 +720,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Update Info tab - get current shader from the controls page
         if (PageContentControl.Content is Page1 controlsPage)
         {
-            var shaderPicker = controlsPage.FindControl<ComboBox>("ShaderPicker");
+            var shaderPicker = controlsPage.FindControl<Utils_ComboBox>("ShaderPicker");
             var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
             
             if (shaderPicker?.SelectedItem is string selectedShader && shaderInfoText != null)
@@ -721,7 +815,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         };
         
         // Register shader nodes visualization update (runs every tick = 10 times per second)
-        RegisterTimerCallback(UpdateShaderNodesVisualization);
+        RegisterTimerCallback(() => {
+            var nodesListBox = this.FindControl<Utils_NodesListBox>("NodesListBox");
+            nodesListBox?.UpdateShaderNodesVisualization();
+        });
         
         _globalUpdateTimer.Start();
         System.Diagnostics.Debug.WriteLine("Global update timer started");
@@ -762,229 +859,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         _timerCallbacks.Remove(callback);
     }
 
-    /// <summary>
-    /// Wires up click handlers for processing node rectangles and value change handlers for sliders
-    /// </summary>
-    private void WireUpProcessingNodeControls()
-    {
-        if (Surface == null) 
-        {
-            System.Diagnostics.Debug.WriteLine("WireUpProcessingNodeControls: Surface is null");
-            return;
-        }
-        
-        try
-        {
-            // Wire up all 6 VFX processing nodes (0-5)
-            for (int i = 0; i < 6; i++)
-            {
-                int slotIndex = i; // Capture for closure
-                
-                // Wire up rectangle border click to toggle active state
-                try
-                {
-                    var rectButton = this.FindControl<Border>($"Node{i + 1}RectButton");
-                    if (rectButton != null)
-                    {
-                        // Remove any existing handlers first to avoid duplicates
-                        rectButton.PointerPressed -= null; // This doesn't work, but we'll add the handler
-                        
-                        rectButton.PointerPressed += (s, e) => {
-                            try
-                            {
-                                e.Handled = true; // Mark as handled
-                                if (Surface != null)
-                                {
-                                    // Allow toggling even if shader not loaded (for UI feedback)
-                                    bool currentState = Surface.GetSlotActive(slotIndex);
-                                    Surface.SetSlotActive(slotIndex, !currentState);
-                                    System.Diagnostics.Debug.WriteLine($"Toggled node {slotIndex} to {!currentState}");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Error toggling node {slotIndex}: {ex.Message}");
-                            }
-                        };
-                        
-                        // Also make sure it's hit-testable and visible
-                        rectButton.IsHitTestVisible = true;
-                        rectButton.IsVisible = true;
-                        System.Diagnostics.Debug.WriteLine($"Wired up Node{i + 1}RectButton - IsHitTestVisible: {rectButton.IsHitTestVisible}, IsVisible: {rectButton.IsVisible}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Node{i + 1}RectButton not found!");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error finding Node{i + 1}RectButton: {ex.Message}");
-                }
-                
-                // Wire up slider value changes
-                try
-                {
-                    var slider = this.FindControl<Slider>($"Node{i + 1}Slider");
-                    var valueText = this.FindControl<TextBlock>($"Node{i + 1}Value");
-                    if (slider != null)
-                    {
-                        slider.ValueChanged += (_, e) => {
-                            try
-                            {
-                                if (Surface != null && e.NewValue is double value)
-                                {
-                                    float floatValue = (float)value;
-                                    Surface.SetSlotValue(slotIndex, floatValue);
-                                    
-                                    // Update the value display immediately for real-time feedback
-                                    if (valueText != null)
-                                    {
-                                        valueText.Text = floatValue.ToString("F2");
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Error setting node {slotIndex} value: {ex.Message}");
-                            }
-                        };
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error finding Node{i + 1}Slider: {ex.Message}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error in WireUpProcessingNodeControls: {ex.Message}\n{ex.StackTrace}");
-            throw; // Re-throw to be caught by caller
-        }
-    }
-    
-    /// <summary>
-    /// Updates the shader nodes visualization in the Global tab
-    /// Shows the processing pipeline as layers: Main Shader -> Processing nodes
-    /// Reads directly from runtime shader state (IsMainShaderLoaded, GetSlotActive, etc.)
-    /// Shows/hides subrows with sliders when nodes are active
-    /// </summary>
-    private void UpdateShaderNodesVisualization()
-    {
-        if (Surface == null) return;
-
-        // Node 0: Main Shader (Global Texture)
-        var node0Border = this.FindControl<Border>("Node0Border");
-        var node0Rect = this.FindControl<Avalonia.Controls.Shapes.Rectangle>("Node0Rect");
-        var node0Text = this.FindControl<TextBlock>("Node0Text");
-        
-        bool isMainShaderLoaded = Surface.IsMainShaderLoaded;
-        
-        // Update Node 0 visualization
-        if (node0Rect != null)
-        {
-            node0Rect.Fill = isMainShaderLoaded
-                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
-                : Avalonia.Media.SolidColorBrush.Parse("#666666");
-        }
-        if (node0Text != null)
-        {
-            node0Text.Text = isMainShaderLoaded 
-                ? "Label 0: Global Texture" 
-                : "Label 0: Global Texture (No Shader)";
-        }
-        if (node0Border != null)
-        {
-            node0Border.BorderBrush = isMainShaderLoaded
-                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
-                : Avalonia.Media.SolidColorBrush.Parse("#666666");
-        }
-
-        // Track previous layer state for arrow visibility
-        bool previousLayerActive = isMainShaderLoaded;
-        
-        // Update all 6 VFX processing nodes
-        // Always show all nodes, but indicate their state (loaded/unloaded, active/inactive)
-        for (int i = 0; i < 6; i++)
-        {
-            var nodeRectButton = this.FindControl<Border>($"Node{i + 1}RectButton");
-            var nodeRect = this.FindControl<Avalonia.Controls.Shapes.Rectangle>($"Node{i + 1}Rect");
-            var nodeBorder = this.FindControl<Border>($"Node{i + 1}Border");
-            var nodeText = this.FindControl<TextBlock>($"Node{i + 1}Text");
-            var nodeArrow = this.FindControl<Avalonia.Controls.Shapes.Path>($"Node{i + 1}Arrow");
-            var nodeSubrow = this.FindControl<Border>($"Node{i + 1}Subrow");
-            var nodeSlider = this.FindControl<Slider>($"Node{i + 1}Slider");
-            var nodeValue = this.FindControl<TextBlock>($"Node{i + 1}Value");
-            
-            bool isShaderLoaded = Surface.IsProcessingNodeShaderLoaded(i);
-            bool isSlotActive = Surface.GetSlotActive(i);
-            string shaderName = Surface.GetProcessingNodeShaderName(i);
-            float slotValue = Surface.GetSlotValue(i);
-            
-            // Always show all nodes - they should be visible regardless of loaded state
-            bool shouldShow = true;
-            
-            // Update rectangle color based on loaded and active state
-            var rectColor = isShaderLoaded && isSlotActive
-                ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
-                : isShaderLoaded
-                    ? Avalonia.Media.SolidColorBrush.Parse("#888888") // Loaded but inactive
-                    : Avalonia.Media.SolidColorBrush.Parse("#666666"); // Not loaded
-            
-            if (nodeRect != null)
-            {
-                nodeRect.Fill = rectColor;
-            }
-            if (nodeBorder != null)
-            {
-                nodeBorder.BorderBrush = isShaderLoaded && isSlotActive
-                    ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00") 
-                    : isShaderLoaded
-                        ? Avalonia.Media.SolidColorBrush.Parse("#888888")
-                        : Avalonia.Media.SolidColorBrush.Parse("#666666");
-                nodeBorder.IsVisible = shouldShow; // Always visible
-            }
-            if (nodeText != null)
-            {
-                // Show node name, or "Not Available" if no shader name
-                string displayName = !string.IsNullOrEmpty(shaderName) ? shaderName : $"Processing Node {i + 1}";
-                nodeText.Text = $"Label {i + 1}: {displayName}";
-            }
-            if (nodeArrow != null)
-            {
-                // Show arrow if previous layer is active and current layer is loaded
-                bool showArrow = previousLayerActive && isShaderLoaded;
-                nodeArrow.IsVisible = showArrow;
-                nodeArrow.Stroke = (showArrow && isSlotActive)
-                    ? Avalonia.Media.SolidColorBrush.Parse("#ff8c00")
-                    : Avalonia.Media.SolidColorBrush.Parse("#666666");
-            }
-            
-            // Show/hide subrow (slider and value) when node is loaded and active
-            if (nodeSubrow != null)
-            {
-                nodeSubrow.IsVisible = isShaderLoaded && isSlotActive;
-            }
-            
-            // Update slider and value display
-            if (nodeSlider != null && isShaderLoaded && isSlotActive)
-            {
-                // Only update if value changed to avoid feedback loop
-                if (Math.Abs(nodeSlider.Value - slotValue) > 0.001)
-                {
-                    nodeSlider.Value = slotValue;
-                }
-            }
-            if (nodeValue != null && isShaderLoaded && isSlotActive)
-            {
-                nodeValue.Text = slotValue.ToString("F2");
-            }
-            
-            // Update previous layer state for next iteration
-            previousLayerActive = isShaderLoaded && isSlotActive;
-        }
-    }
     
     // ========================================================================
     // PAGE NAVIGATION - Multi-page UI management
@@ -1030,7 +904,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void Page1_WireUp(Page1 page)
     {
         // Find controls and wire up events
-        var shaderPicker = page.FindControl<ComboBox>("ShaderPicker");
+        var shaderPicker = page.FindControl<Utils_ComboBox>("ShaderPicker");
         var tempoButton = page.FindControl<Button>("TempoButton");
         var resetButton = page.FindControl<Button>("ResetButton");
         var touchpadButton = page.FindControl<Button>("TouchpadButton");
@@ -1042,6 +916,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     var fullPath = System.IO.Path.Combine(_shaderDir, filename);
                     if (File.Exists(fullPath)) {
                         Surface.LoadFragmentShaderFromFile(fullPath, out var message);
+                        
+                        // Sync Child Window 2 if open - reload shader and sync state
+                        if (_childWindow2 != null && _childWindow2.IsVisible)
+                        {
+                            _childWindow2.LoadShaderFromFile(fullPath);
+                            _childWindow2.SyncShaderState();
+                        }
+                        
                         UpdateTabContent();
                     }
                 }
@@ -1511,40 +1393,111 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
     
     // ========================================================================
-    // CHILD WINDOW MANAGEMENT - Floating tempo display window
+    // CHILD WINDOW MANAGEMENT - Floating tempo display and viewport windows
     // ========================================================================
     
     /// <summary>
-    /// Opens or activates the child window for tempo display
-    /// Reuses existing window if available, creates new one if needed
+    /// Toggles Child Window 1 (tempo display window)
+    /// Opens if closed, closes if open
     /// </summary>
-    private void OpenChildWindow()
+    private void ToggleChildWindow1()
     {
-        // If window already exists and is open, bring it to front
-        if (_childWindow != null && _childWindow.IsVisible)
+        // If window exists and is visible, close it
+        if (_childWindow1 != null && _childWindow1.IsVisible)
         {
-            _childWindow.Activate();
+            _childWindow1.Close();
+            _childWindow1 = null;
+            LogMessage("Child Window 1 closed");
             return;
         }
 
         // Create new child window if it doesn't exist or was closed
-        if (_childWindow == null || !_childWindow.IsVisible)
+        if (_childWindow1 == null || !_childWindow1.IsVisible)
         {
-            _childWindow = new ChildWindow();
+            _childWindow1 = new ChildWindow1();
             
             // Share the tempo object for real-time data binding
-            _childWindow.SetSharedTempo(_globalTempoNumber);
+            _childWindow1.SetSharedTempo(_globalTempoNumber);
             
             // Handle window closing to clean up
-            _childWindow.Closed += (_, __) =>
+            _childWindow1.Closed += (_, __) =>
             {
-                // Note: Don't set _childWindow to null here since we might want to reuse it
-                LogMessage("Child window closed");
+                _childWindow1 = null;
+                LogMessage("Child Window 1 closed");
             };
             
             // Show the window (non-modal, floating)
-            _childWindow.Show(this);
-            LogMessage("Child window opened");
+            _childWindow1.Show(this);
+            LogMessage("Child Window 1 opened");
+        }
+    }
+    
+    /// <summary>
+    /// Toggles Child Window 2 (full-screen pipeline viewport)
+    /// Opens if closed, closes if open
+    /// </summary>
+    private void ToggleChildWindow2()
+    {
+        // If window exists and is visible, close it
+        if (_childWindow2 != null && _childWindow2.IsVisible)
+        {
+            _childWindow2.Close();
+            _childWindow2 = null;
+            LogMessage("Child Window 2 closed");
+            return;
+        }
+
+        // Create new child window if it doesn't exist or was closed
+        if (_childWindow2 == null || !_childWindow2.IsVisible)
+        {
+            if (Surface == null)
+            {
+                LogMessage("Cannot open Child Window 2: Shader surface not available");
+                return;
+            }
+            
+            _childWindow2 = new ChildWindow2();
+            
+            // Set the main surface reference for syncing
+            _childWindow2.SetMainSurface(Surface);
+            
+            // Sync current shader if one is loaded
+            if (PageContentControl.Content is Page1 controlsPage)
+            {
+                var shaderPicker = controlsPage.FindControl<Utils_ComboBox>("ShaderPicker");
+                if (shaderPicker?.SelectedItem is string selectedShader)
+                {
+                    var fullPath = System.IO.Path.Combine(_shaderDir, selectedShader);
+                    if (File.Exists(fullPath))
+                    {
+                        _childWindow2.LoadShaderFromFile(fullPath);
+                        _childWindow2.SyncShaderState();
+                    }
+                }
+            }
+            
+            // Handle window closing to clean up
+            _childWindow2.Closed += (_, __) =>
+            {
+                _childWindow2 = null;
+                LogMessage("Child Window 2 closed");
+            };
+            
+            // Show the window (non-modal, floating)
+            _childWindow2.Show(this);
+            LogMessage("Child Window 2 opened - Full-screen pipeline viewport");
+        }
+    }
+    
+    /// <summary>
+    /// Syncs Child Window 2's shader state when shader changes occur
+    /// Called whenever the main shader or processing nodes are updated
+    /// </summary>
+    private void SyncChildWindow2()
+    {
+        if (_childWindow2 != null && _childWindow2.IsVisible)
+        {
+            _childWindow2.SyncShaderState();
         }
     }
     

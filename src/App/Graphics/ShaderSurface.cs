@@ -197,8 +197,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
             0 => "Saturation",
             1 => "Ping-Pong Delay",
             2 => "Barrel Distortion",
-            3 => "Processing Node 4",
-            4 => "Processing Node 5",
+            3 => "(Empty) Processing Node 4",
+            4 => "(Empty) Processing Node 5",
             5 => "Blackout",
             _ => ""
         };
@@ -568,6 +568,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 // ========================
                 // All 6 VFX nodes are processed in order: Saturation, Ping-Pong, Barrel, Node 4, Node 5, Blackout.
                 // Each node reads from the previous node's output and writes to its own dedicated buffer.
+                // We track the last active node to ensure we always show the final processed output (last texture).
+                int lastActiveNodeIndex = -1;
                 for (int i = 0; i < 6; i++)
                 {
                     if (_processing_nodeActive[i] && _processing_nodePrograms[i] != 0)
@@ -634,7 +636,15 @@ public sealed class ShaderSurface : OpenGlControlBase {
                         
                         // Update current texture for next effect in the chain
                         currentTexture = targetTexture;
+                        lastActiveNodeIndex = i; // Track the last active node
                     }
+                }
+                
+                // Ensure currentTexture points to the last active node's output (last texture in pipeline)
+                // This guarantees we always show the final processed output, not the first texture
+                if (lastActiveNodeIndex >= 0 && _processing_nodeTextures[lastActiveNodeIndex] != 0)
+                {
+                    currentTexture = _processing_nodeTextures[lastActiveNodeIndex];
                 }
                 
                 // ========================

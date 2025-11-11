@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:Diffracta"
+        xmlns:gfx="using:Diffracta.Graphics"
+        x:Class="Diffracta.ChildWindow2"
+        x:DataType="local:ChildWindow2"
+        Width="800" Height="600" 
+        Title="Child Window 2 - Pipeline Viewport"
+        WindowStartupLocation="CenterScreen"
+        Background="#000000">
+  
+  <Grid Margin="0">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    
+    <!-- Top bar with close button -->
+    <Border Grid.Row="0" 
+            Background="#2d2d2d" 
+            BorderBrush="#555555" 
+            BorderThickness="0,0,0,1"
+            Padding="8,4">
+      <StackPanel Orientation="Horizontal" 
+                  HorizontalAlignment="Right">
+        <Button Content="Close" 
+                Click="CloseButton_Click"
+                Background="#d3d3d3"
+                Foreground="Black"
+                Width="80"
+                Height="28"
+                FontSize="12"/>
+      </StackPanel>
+    </Border>
+    
+    <!-- Full-screen shader surface -->
+    <Border Grid.Row="1"
+            BorderBrush="#555555" 
+            BorderThickness="0"
+            HorizontalAlignment="Stretch" 
+            VerticalAlignment="Stretch"
+            Padding="0"
+            Margin="0"
+            ClipToBounds="True"
+            Background="#000000">
+      <gfx:ShaderSurface x:Name="ChildSurface" 
+                        Width="NaN"
+                        Height="NaN"
+                        Margin="0" 
+                        Focusable="True" 
+                        ClipToBounds="True" 
+                        HorizontalAlignment="Stretch" 
+                        VerticalAlignment="Stretch"/>
+    </Border>
+  </Grid>
+</Window>
+

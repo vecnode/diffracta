@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace Diffracta;
 
-public partial class ChildWindow : Window, INotifyPropertyChanged
+public partial class ChildWindow1 : Window, INotifyPropertyChanged
 {
     private string _sharedMessage = "Data is shared with the main window in real-time";
     private MainTempo? _sharedTempo;
@@ -30,7 +30,7 @@ public partial class ChildWindow : Window, INotifyPropertyChanged
 
     public string TempoDisplay => _sharedTempo?.TimeDisplay ?? "00:00:00";
 
-    public ChildWindow()
+    public ChildWindow1()
     {
         InitializeComponent();
         DataContext = this;

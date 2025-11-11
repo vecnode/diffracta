@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Diffracta"
+             x:Class="Diffracta.Utils_NodesListBox">
+  <StackPanel Spacing="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <!-- Shader Nodes Visualization - Processing Layers -->
+    <Border BorderBrush="#555555" BorderThickness="1" Background="#1e1e1e" Margin="0,0,0,8" Padding="8">
+        <StackPanel Spacing="4">
+            <!-- Layer 0: Main Shader (Global Texture) -->
+            <Border x:Name="Node0Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node0RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node0Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node0Text" 
+                                   Text="Label 0: Global Texture" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node0Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node0Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node0Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            
+            <!-- Arrow from Layer 0 to Layer 1 -->
+            <Path x:Name="Node1Arrow" 
+                  Data="M 0,0 L 0,8 M -3,5 L 0,8 L 3,5" 
+                  Stroke="#666666" 
+                  StrokeThickness="1.5" 
+                  StrokeJoin="Round"
+                  HorizontalAlignment="Center"
+                  Margin="0,2,0,2"
+                  IsVisible="True"/>
+            
+            <!-- Layer 1: Post-Process Node 0 -->
+            <Border x:Name="Node1Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node1RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node1Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node1Text" 
+                                   Text="Label 1: Post-Process" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node1Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node1Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node1Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            
+
+            
+            <!-- Layer 2: Post-Process Node 1 -->
+            <Border x:Name="Node2Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node2RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node2Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node2Text" 
+                                   Text="Label 2: Post-Process" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node2Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node2Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node2Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            
+            <!-- Layer 3: Post-Process Node 2 -->
+            <Border x:Name="Node3Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node3RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node3Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node3Text" 
+                                   Text="Label 3: Post-Process" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node3Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node3Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node3Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+
+            
+            <!-- Layer 4: Post-Process Node 3 -->
+            <Border x:Name="Node4Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node4RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node4Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node4Text" 
+                                   Text="Label 4: Post-Process" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node4Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node4Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node4Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            
+
+            
+            <!-- Layer 5: Post-Process Node 4 -->
+            <Border x:Name="Node5Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node5RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node5Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node5Text" 
+                                   Text="Label 5: Post-Process" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node5Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node5Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node5Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            
+            <!-- Layer 6: Blackout MASTER Node -->
+            <Border x:Name="Node6Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node6RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node6Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node6Text" 
+                                   Text="Label 6: Blackout (MASTER)" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Subrow: Slider and Value (shown when active) -->
+                    <Border x:Name="Node6Subrow"
+                            Margin="20,0,0,0"
+                            IsVisible="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Slider x:Name="Node6Slider"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="0"
+                                    Width="200"
+                                    Height="32"
+                                    VerticalAlignment="Center"/>
+                            <Border BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="0"
+                                    Padding="4,2">
+                                <TextBlock x:Name="Node6Value"
+                                           Text="0.00"
+                                           Foreground="#888888"
+                                           FontSize="12"
+                                           Width="30"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Arrow from Layer 0 to Layer 1 -->
+            <Path x:Name="Node7Arrow" 
+                  Data="M 0,0 L 0,8 M -3,5 L 0,8 L 3,5" 
+                  Stroke="#666666" 
+                  StrokeThickness="1.5" 
+                  StrokeJoin="Round"
+                  HorizontalAlignment="Center"
+                  Margin="0,2,0,2"
+                  IsVisible="True"/>
+
+            <!-- Layer 7: Output Texture (MASTER) -->
+            <Border x:Name="Node7Border" 
+                    BorderBrush="#666666" 
+                    BorderThickness="1" 
+                    Background="#2d2d2d" 
+                    CornerRadius="2" 
+                    Padding="6,4"
+                    IsVisible="True">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border x:Name="Node7RectButton"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                Padding="2"
+                                Cursor="Hand"
+                                IsHitTestVisible="True">
+                            <Rectangle x:Name="Node7Rect" 
+                                       Width="12" 
+                                       Height="12" 
+                                       Fill="#666666" 
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock x:Name="Node7Text" 
+                                   Text="Label 7: Output Texture" 
+                                   Foreground="White" 
+                                   FontSize="12" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+ 
+        </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>
+
