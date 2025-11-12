@@ -32,7 +32,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node0Text" 
-                                   Text="Label 0: Global Texture" 
+                                   Text="Node 0: Global Texture" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -102,7 +102,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node1Text" 
-                                   Text="Label 1: Post-Process" 
+                                   Text="Node 1: Post-Process" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -164,7 +164,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node2Text" 
-                                   Text="Label 2: Post-Process" 
+                                   Text="Node 2: Post-Process" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -224,7 +224,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node3Text" 
-                                   Text="Label 3: Post-Process" 
+                                   Text="Node 3: Post-Process" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -286,7 +286,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node4Text" 
-                                   Text="Label 4: Post-Process" 
+                                   Text="Node 4: Post-Process" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -348,7 +348,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node5Text" 
-                                   Text="Label 5: Post-Process" 
+                                   Text="Node 5: Post-Process" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -408,7 +408,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node6Text" 
-                                   Text="Label 6: Blackout (MASTER)" 
+                                   Text="Node 6: Blackout (MASTER)" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>
@@ -478,7 +478,7 @@
                                        IsHitTestVisible="False"/>
                         </Border>
                         <TextBlock x:Name="Node7Text" 
-                                   Text="Label 7: Output Texture" 
+                                   Text="Node 7: Output Texture" 
                                    Foreground="White" 
                                    FontSize="12" 
                                    VerticalAlignment="Center"/>

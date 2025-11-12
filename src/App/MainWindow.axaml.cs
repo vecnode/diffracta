@@ -1,10 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Controls.Templates;
+using Avalonia.VisualTree;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -133,6 +137,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     System.Diagnostics.Debug.WriteLine($"Error wiring up processing node controls: {ex}");
                 }
                 
+                // Wire up MenuBar styling and hover effects
+                WireUpMenuBarStyling();
+                
                 // Initialize with controls page
                 SwitchToPage(1);
                 
@@ -214,6 +221,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 ExitPerformanceMode();
             }
         };
+    }
+    
+    // ========================================================================
+    // MENUBAR STYLING - Apply custom styling and hover effects
+    // ========================================================================
+    
+    /// <summary>
+    /// Wires up MenuBar styling, hover effects, and popup styling similar to Utils_ComboBox
+    /// </summary>
+    private void WireUpMenuBarStyling()
+    {
+        Utils_MenuBar.WireUpMenuBarStyling(MenuBar);
     }
     
     // ========================================================================

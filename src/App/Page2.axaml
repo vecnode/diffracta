@@ -27,27 +27,15 @@
                             Padding="8,0"/>
                     <Button x:Name="BrowseButton" 
                             Content="Browse" 
-                            Height="30"
-                            Background="DarkGray"
-                            Foreground="White"
-                            BorderThickness="0"
-                            CornerRadius="0"/>
+                            Height="30"/>
                     <Button x:Name="UpButton" 
                             Content="↑" 
                             Width="30"
                             Height="30"
-                            Background="DarkGray"
-                            Foreground="White"
-                            BorderThickness="0"
-                            CornerRadius="0"
                             FontSize="16"/>
                     <Button x:Name="OpenButton" 
                             Content="Open" 
-                            Height="30"
-                            Background="DarkGray"
-                            Foreground="White"
-                            BorderThickness="0"
-                            CornerRadius="0"/>
+                            Height="30"/>
                 </StackPanel>
                 
                 <ListBox x:Name="DirectoryListBox" 
@@ -83,11 +71,7 @@
                 <Button x:Name="LoadShaderButton" 
                         Content="Open" 
                         Width="200" 
-                        Height="30"
-                        Background="#d3d3d3"
-                        Foreground="Black"
-                        BorderThickness="1"
-                        CornerRadius="4"/>
+                        Height="30"/>
             </StackPanel>
             
             

@@ -16,26 +16,27 @@
             <Setter Property="Height" Value="30"/>
         </Style>
         
-        <!-- ComboBox hover state -->
+
+
+        <!-- ComboBox hover state - Note: This may not work due to child elements intercepting pointer events -->
+        <!-- Hover is handled in code-behind instead -->
         <Style Selector="ComboBox:pointerover">
             <Setter Property="Background" Value="#3d3d3d"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
         
         <!-- ComboBox pressed state -->
         <Style Selector="ComboBox:pressed">
             <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
         
-        <!-- ComboBox ContentPresenter (the text display area) -->
-        <Style Selector="ComboBox > ContentPresenter">
-            <Setter Property="Background" Value="#1c1c1c"/>
-            <Setter Property="Foreground" Value="#3c3c3c"/>
-            <Setter Property="CornerRadius" Value="0"/>
-        </Style>
+        
+        
         
         <!-- ComboBox Button (the dropdown arrow button) -->
         <Style Selector="ComboBox > Button">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="#1c1c1c"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
         </Style>
         
@@ -100,3 +101,5 @@
         </ComboBox.ItemTemplate>
     </ComboBox>
 </UserControl>
+
+

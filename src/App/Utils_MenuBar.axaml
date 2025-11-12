@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Menu styling - grey background, white text -->
+    <Style Selector="Menu">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Height" Value="26"/>
+    </Style>
+    
+    <!-- Menu panel container - grey background -->
+    <Style Selector="Menu > Panel">
+        <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- MenuItem styling - grey background, white text -->
+    <Style Selector="MenuItem">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    
+    <!-- MenuItem ContentPresenter to remove any default spacing -->
+    <Style Selector="MenuItem > ContentPresenter">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- MenuItem hover - lighter than parent panel -->
+    <Style Selector="MenuItem:pointerover">
+        <Setter Property="Background" Value="#3d3d3d"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- MenuItem hover - style any Border inside -->
+    <Style Selector="MenuItem:pointerover > Border">
+        <Setter Property="Background" Value="#3d3d3d"/>
+    </Style>
+    
+    <!-- MenuItem hover - style ContentPresenter inside -->
+    <Style Selector="MenuItem:pointerover > ContentPresenter">
+        <Setter Property="Background" Value="#3d3d3d"/>
+    </Style>
+    
+    <!-- MenuItem pressed state -->
+    <Style Selector="MenuItem:pressed">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- MenuItem popup/dropdown container - dark grey background -->
+    <!-- Note: Code-behind in Utils_MenuBar.axaml.cs handles PopupBorder styling -->
+    <!-- Popup container styles - fallback in case code-behind doesn't catch everything -->
+        <!-- Note: Code-behind in Utils_ComboBox.axaml.cs handles PopupBorder styling -->
+
+    
+    <Style Selector="MenuItem > Popup > Border">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
+        <Setter Property="BorderThickness" Value="1,0,1,0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    
+    <!-- MenuItem popup panel container - dark grey background -->
+    <Style Selector="MenuItem > Popup > Border > Panel">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- Popup container styles - fallback in case code-behind doesn't catch everything -->
+    <Style Selector="MenuItem Popup ScrollViewer">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <Style Selector="MenuItem Popup Panel">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- Submenu MenuItem items - dark grey background -->
+    <Style Selector="MenuItem > Popup MenuItem">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    
+    <!-- Submenu MenuItem ContentPresenter -->
+    <Style Selector="MenuItem > Popup MenuItem > ContentPresenter">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- Submenu MenuItem hover -->
+    <Style Selector="MenuItem > Popup MenuItem:pointerover">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- Submenu MenuItem hover - style Border inside -->
+    <Style Selector="MenuItem > Popup MenuItem:pointerover > Border">
+        <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- Submenu MenuItem hover - style ContentPresenter inside -->
+    <Style Selector="MenuItem > Popup MenuItem:pointerover > ContentPresenter">
+        <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- DropDownButton styling in MenuItem popup -->
+    <Style Selector="MenuItem > Popup DropDownButton">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    
+    <!-- DropDownButton hover in MenuItem popup -->
+    <Style Selector="MenuItem > Popup DropDownButton:pointerover">
+        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- DropDownButton pressed in MenuItem popup -->
+    <Style Selector="MenuItem > Popup DropDownButton:pressed">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <!-- DropDownButton ContentPresenter -->
+    <Style Selector="MenuItem > Popup DropDownButton > ContentPresenter">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    
+    <!-- DropDownButton hover ContentPresenter -->
+    <Style Selector="MenuItem > Popup DropDownButton:pointerover > ContentPresenter">
+        <Setter Property="Background" Value="#2d2d2d"/>
+    </Style>
+    
+    <!-- DropDownButton popup/dropdown container -->
+    <Style Selector="MenuItem > Popup DropDownButton > Popup > Border">
+        <Setter Property="Background" Value="#1c1c1c"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
+        <Setter Property="BorderThickness" Value="1,0,1,0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    
+    <!-- DropDownButton popup panel -->
+    <Style Selector="MenuItem > Popup DropDownButton > Popup > Border > Panel">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- DropDownButton popup ScrollViewer -->
+    <Style Selector="MenuItem > Popup DropDownButton Popup ScrollViewer">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- DropDownButton popup Panel -->
+    <Style Selector="MenuItem > Popup DropDownButton Popup Panel">
+        <Setter Property="Background" Value="#1c1c1c"/>
+    </Style>
+    
+    <!-- Submenu Separator styling -->
+    <Style Selector="MenuItem > Popup Separator">
+        <Setter Property="Background" Value="#555555"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="4,2"/>
+    </Style>
+    
+    <!-- Separator styling -->
+    <Style Selector="Separator">
+        <Setter Property="Background" Value="#555555"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="4,2"/>
+    </Style>
+</Styles>
+
+

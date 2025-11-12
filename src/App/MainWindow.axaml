@@ -27,6 +27,8 @@
   
   <Window.Styles>
     <StyleInclude Source="avares://Diffracta/Utils_Slider.axaml"/>
+    <StyleInclude Source="avares://Diffracta/Utils_Button.axaml"/>
+    <StyleInclude Source="avares://Diffracta/Utils_MenuBar.axaml"/>
     
     <Style Selector="TextBox#LogTextBox">
       <Setter Property="Background" Value="Transparent"/>
@@ -34,48 +36,6 @@
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="Cursor" Value="Arrow"/>
-    </Style>
-    
-    
-    <!-- Button styling - light grey background with black text -->
-    <Style Selector="Button">
-      <Setter Property="Background" Value="#d3d3d3"/>
-      <Setter Property="Foreground" Value="Black"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="FontSize" Value="12"/>
-    </Style>
-
-    <Style Selector="Menu">
-        <Setter Property="Height" Value="26"/>
-        <Setter Property="Background" Value="#2d2d2d"/>
-    </Style>
-    
-    
-
-    <Style Selector="MenuItem">
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Background" Value="#2d2d2d"/>
-        <Setter Property="BorderBrush" Value="#2d2d2d"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontSize" Value="12"/>
-    </Style>
-    
-    <!-- MenuItem hover - keep white text, grey background -->
-    <Style Selector="MenuItem:pointerover">
-      <Setter Property="Foreground" Value="White"/>
-      <Setter Property="Background" Value="#3d3d3d"/>
-    </Style>
-    
-    <!-- MenuItem popup/dropdown container - grey background -->
-    <Style Selector="MenuItem > Popup > Border">
-        <Setter Property="Background" Value="#2d2d2d"/>
-        <Setter Property="BorderBrush" Value="#2d2d2d"/>
-        <Setter Property="BorderThickness" Value="1"/>
-    </Style>
-    
-    <!-- Menu panel container - grey background -->
-    <Style Selector="Menu > Panel">
-        <Setter Property="Background" Value="#2d2d2d"/>
     </Style>
     
     <!-- TabItem styling - reduce header height and remove underline -->
@@ -109,12 +69,10 @@
     <Menu x:Name="MenuBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2d2d2d" Foreground="White" FontSize="12">
         <MenuItem Header="_File">
             <MenuItem Header="_New" />
-            <Separator />
             <MenuItem Header="E_xit" />
         </MenuItem>
         <MenuItem Header="_View">
             <MenuItem Header="Toggle Performance Mode" />
-            <Separator />
             <MenuItem Header="Toggle Child Window 1" x:Name="ChildWindow1MenuItem" />
             <MenuItem Header="Toggle Child Window 2" x:Name="ChildWindow2MenuItem" />
         </MenuItem>

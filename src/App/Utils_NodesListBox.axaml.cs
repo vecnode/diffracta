@@ -167,8 +167,8 @@ public partial class Utils_NodesListBox : UserControl
         if (node0Text != null)
         {
             node0Text.Text = isMainShaderLoaded 
-                ? "Label 0: Global Texture" 
-                : "Label 0: Global Texture (No Shader)";
+                ? "Node 0: Global Texture" 
+                : "Node 0: Global Texture (No Shader)";
         }
         if (node0Border != null)
         {
@@ -224,7 +224,7 @@ public partial class Utils_NodesListBox : UserControl
             {
                 // Show node name, or "Not Available" if no shader name
                 string displayName = !string.IsNullOrEmpty(shaderName) ? shaderName : $"Processing Node {i + 1}";
-                nodeText.Text = $"Label {i + 1}: {displayName}";
+                nodeText.Text = $"Node {i + 1}: {displayName}";
             }
             if (nodeArrow != null)
             {
@@ -263,6 +263,23 @@ public partial class Utils_NodesListBox : UserControl
             
             // Update previous layer state for next iteration
             previousLayerActive = isShaderLoaded && isSlotActive;
+        }
+        
+        // Node 7: Output Texture (MASTER) - always show orange border when main shader is loaded (like Node 0)
+        var node7Border = this.FindControl<Border>("Node7Border");
+        var node7Rect = this.FindControl<Rectangle>("Node7Rect");
+        
+        if (node7Border != null)
+        {
+            node7Border.BorderBrush = isMainShaderLoaded
+                ? SolidColorBrush.Parse("#ff8c00") 
+                : SolidColorBrush.Parse("#666666");
+        }
+        if (node7Rect != null)
+        {
+            node7Rect.Fill = isMainShaderLoaded
+                ? SolidColorBrush.Parse("#ff8c00") 
+                : SolidColorBrush.Parse("#666666");
         }
     }
 }
