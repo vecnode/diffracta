@@ -197,8 +197,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
             0 => "Saturation",
             1 => "Ping-Pong Delay",
             2 => "Barrel Distortion",
-            3 => "(Empty) Processing Node 4",
-            4 => "(Empty) Processing Node 5",
+            3 => "Empty Node 4",
+            4 => "Empty Node 5",
             5 => "Blackout",
             _ => ""
         };

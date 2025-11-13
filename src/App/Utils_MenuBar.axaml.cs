@@ -201,7 +201,7 @@ public static class Utils_MenuBar
                 };
             }
         }
-        catch (Exception ex)
+        catch
         {
             // Silently handle errors
         }
@@ -425,7 +425,7 @@ public static class Utils_MenuBar
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
             // Silently handle errors
         }

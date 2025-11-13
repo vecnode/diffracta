@@ -27,12 +27,8 @@
                         Content="Split Vertical" 
                         Width="100"
                         Click="OnSplitVerticalClick"/>
-                <TextBlock x:Name="TempoDisplay" 
-                           Text="{Binding Tempo.TimeDisplay}" 
-                           Foreground="White" 
-                           FontSize="14" 
-                           VerticalAlignment="Center"
-                           MinWidth="80"/>
+                
+                <local:Utils_GlobalTempoDisplay x:Name="TempoDisplay"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">

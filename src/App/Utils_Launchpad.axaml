@@ -3,8 +3,6 @@
              xmlns:local="using:Diffracta"
              x:Class="Diffracta.Utils_Launchpad">
 
-
-    
     
     <Border Background="#1e1e1e" Padding="6" BorderBrush="Pink" BorderThickness="1">
         <Grid>
@@ -13,7 +11,7 @@
                 <RowDefinition Height="*"/> <!-- Pad area -->
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="40"/> <!-- Left bar -->
+                <ColumnDefinition Width="160"/> <!-- Left bar -->
                 <ColumnDefinition Width="*"/> <!-- Pad area -->
             </Grid.ColumnDefinitions>
             
@@ -44,107 +42,107 @@
                     </Grid.ColumnDefinitions>
                     
                     <!-- Row 0 -->
-                    <Button x:Name="Pad01Button" Grid.Row="0" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S01" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad01Button" Grid.Row="0" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S01" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad02Button" Grid.Row="0" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S02" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad02Button" Grid.Row="0" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S02" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad03Button" Grid.Row="0" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S03" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad03Button" Grid.Row="0" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S03" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad04Button" Grid.Row="0" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S04" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad04Button" Grid.Row="0" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S04" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad05Button" Grid.Row="0" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S05" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad05Button" Grid.Row="0" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S05" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad06Button" Grid.Row="0" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S06" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad06Button" Grid.Row="0" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S06" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad07Button" Grid.Row="0" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S07" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad07Button" Grid.Row="0" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S07" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad08Button" Grid.Row="0" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S08" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad08Button" Grid.Row="0" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" CornerRadius="2">
+                        <TextBlock Text="S08" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     
                     <!-- Row 1 -->
-                    <Button x:Name="Pad09Button" Grid.Row="1" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S09" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad09Button" Grid.Row="1" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S09" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad10Button" Grid.Row="1" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S10" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad10Button" Grid.Row="1" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad11Button" Grid.Row="1" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S11" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad11Button" Grid.Row="1" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S11" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad12Button" Grid.Row="1" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S12" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad12Button" Grid.Row="1" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S12" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad13Button" Grid.Row="1" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S13" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad13Button" Grid.Row="1" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad14Button" Grid.Row="1" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S14" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad14Button" Grid.Row="1" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad15Button" Grid.Row="1" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S15" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad15Button" Grid.Row="1" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S15" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad16Button" Grid.Row="1" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S16" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad16Button" Grid.Row="1" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" CornerRadius="2">
+                        <TextBlock Text="S16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     
                     <!-- Row 2 -->
-                    <Button x:Name="Pad17Button" Grid.Row="2" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S17" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad17Button" Grid.Row="2" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S17" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad18Button" Grid.Row="2" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S18" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad18Button" Grid.Row="2" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad19Button" Grid.Row="2" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S19" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad19Button" Grid.Row="2" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S19" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad20Button" Grid.Row="2" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S20" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad20Button" Grid.Row="2" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad21Button" Grid.Row="2" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S21" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad21Button" Grid.Row="2" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S21" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad22Button" Grid.Row="2" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S22" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad22Button" Grid.Row="2" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S22" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad23Button" Grid.Row="2" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S23" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad23Button" Grid.Row="2" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,4" CornerRadius="2">
+                        <TextBlock Text="S23" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad24Button" Grid.Row="2" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S24" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad24Button" Grid.Row="2" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,4" CornerRadius="2">
+                        <TextBlock Text="S24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     
                     <!-- Row 3 -->
-                    <Button x:Name="Pad25Button" Grid.Row="3" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S25" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad25Button" Grid.Row="3" Grid.Column="0" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S25" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad26Button" Grid.Row="3" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S26" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad26Button" Grid.Row="3" Grid.Column="1" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S26" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad27Button" Grid.Row="3" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S27" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad27Button" Grid.Row="3" Grid.Column="2" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S27" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad28Button" Grid.Row="3" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S28" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad28Button" Grid.Row="3" Grid.Column="3" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S28" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad29Button" Grid.Row="3" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S29" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad29Button" Grid.Row="3" Grid.Column="4" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S29" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad30Button" Grid.Row="3" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S30" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad30Button" Grid.Row="3" Grid.Column="5" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S30" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad31Button" Grid.Row="3" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S31" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad31Button" Grid.Row="3" Grid.Column="6" Width="60" Height="40" Margin="0,0,4,0" CornerRadius="2">
+                        <TextBlock Text="S31" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <Button x:Name="Pad32Button" Grid.Row="3" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,0" Background="DarkGray" BorderBrush="Pink" BorderThickness="1" CornerRadius="4" FontSize="12">
-                        <TextBlock Text="S32" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="Pad32Button" Grid.Row="3" Grid.Column="7" Width="60" Height="40" Margin="0,0,0,0" CornerRadius="2">
+                        <TextBlock Text="S32" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                 </Grid>
             </Border>

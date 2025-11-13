@@ -4,9 +4,6 @@
              x:Class="Diffracta.Page2">
     <ScrollViewer Margin="8">
         <StackPanel Spacing="12">
-            <TextBlock Text="Load Media" Foreground="White" FontSize="14"/>
-
-            <TextBlock Text="List shaders default and folder media outside" Foreground="White" FontSize="14"/>
 
             <!-- Browse Directory -->
             <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="0" Padding="8" Margin="0,16,0,0" Width="500" HorizontalAlignment="Left">
