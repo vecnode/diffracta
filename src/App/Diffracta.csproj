@@ -13,7 +13,7 @@
         <RootNamespace>Diffracta</RootNamespace>
         
         <!-- Application Icon -->
-        <ApplicationIcon>../../icons/app-icon.ico</ApplicationIcon>
+        <ApplicationIcon>../../assets/app-icon.ico</ApplicationIcon>
         
         <!-- publish for multiple OSes -->
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
@@ -45,10 +45,10 @@
 
     <!-- Include icon files -->
     <ItemGroup>
-        <None Include="../../icons/app-icon.ico">
+        <None Include="../../assets/app-icon.ico">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Include="../../icons/app-icon-*.png">
+        <None Include="../../assets/app-icon-*.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

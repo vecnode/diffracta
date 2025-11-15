@@ -16,23 +16,7 @@
             <Setter Property="Height" Value="30"/>
         </Style>
         
-
-
-        <!-- ComboBox hover state - Note: This may not work due to child elements intercepting pointer events -->
-        <!-- Hover is handled in code-behind instead -->
-        <Style Selector="ComboBox:pointerover">
-            <Setter Property="Background" Value="#3d3d3d"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        
-        <!-- ComboBox pressed state -->
-        <Style Selector="ComboBox:pressed">
-            <Setter Property="Background" Value="#2d2d2d"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        
-        
-        
+        <!-- ComboBox hover and pressed states are handled in code-behind -->
         
         <!-- ComboBox Button (the dropdown arrow button) -->
         <Style Selector="ComboBox > Button">
@@ -60,26 +44,48 @@
             <Setter Property="Background" Value="#1c1c1c"/>
         </Style>
         
-        <!-- ComboBoxItem hover - lighter than parent panel -->
+        <!-- ComboBoxItem hover - lighter grey background -->
         <Style Selector="ComboBoxItem:pointerover">
-            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Background" Value="#3d3d3d"/>
             <Setter Property="Foreground" Value="White"/>
         </Style>
         
         <!-- ComboBoxItem hover - style any Border inside -->
         <Style Selector="ComboBoxItem:pointerover > Border">
-            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Background" Value="#3d3d3d"/>
+            <Setter Property="BorderBrush" Value="#000000"/>
         </Style>
         
         <!-- ComboBoxItem hover - style ContentPresenter inside -->
         <Style Selector="ComboBoxItem:pointerover > ContentPresenter">
-            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Background" Value="#3d3d3d"/>
         </Style>
         
-        <!-- ComboBoxItem selected -->
+        <!-- ComboBoxItem hover - style any Panel inside (sometimes ComboBoxItem uses Panel) -->
+        <Style Selector="ComboBoxItem:pointerover > Panel">
+            <Setter Property="Background" Value="#3d3d3d"/>
+        </Style>
+        
+        <!-- ComboBoxItem selected - lighter grey background -->
         <Style Selector="ComboBoxItem:selected">
-            <Setter Property="Background" Value="#1c1c1c"/>
+            <Setter Property="Background" Value="#3d3d3d"/>
             <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <!-- ComboBoxItem selected - style any Border inside -->
+        <Style Selector="ComboBoxItem:selected > Border">
+            <Setter Property="Background" Value="#3d3d3d"/>
+            <Setter Property="BorderBrush" Value="#3d3d3d"/>
+        </Style>
+        
+        <!-- ComboBoxItem selected - style ContentPresenter inside -->
+        <Style Selector="ComboBoxItem:selected > ContentPresenter">
+            <Setter Property="Background" Value="#3d3d3d"/>
+        </Style>
+        
+        <!-- ComboBoxItem selected - style any Panel inside (sometimes ComboBoxItem uses Panel) -->
+        <Style Selector="ComboBoxItem:selected > Panel">
+            <Setter Property="Background" Value="#3d3d3d"/>
         </Style>
         
         <!-- Popup container styles - fallback in case code-behind doesn't catch everything -->

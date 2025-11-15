@@ -3,10 +3,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Avalonia.Styling;
 using Avalonia.VisualTree;
 using System.Collections;
-using System.ComponentModel;
 using System.Linq;
 
 namespace Diffracta;
@@ -17,7 +15,6 @@ namespace Diffracta;
 public partial class Utils_ComboBox : UserControl
 {
     private Border? _comboBoxBorder;
-    private Panel? _comboBoxContentPresenter;
     
     public Utils_ComboBox()
     {
@@ -32,64 +29,50 @@ public partial class Utils_ComboBox : UserControl
     
     private void OnComboBoxLoaded(object? sender, RoutedEventArgs e)
     {
-        // Find the Border and ContentPresenter elements in the ComboBox template
+        // Find the Border element in the ComboBox template
         _comboBoxBorder = ComboBoxControl.GetVisualDescendants()
             .OfType<Border>()
             .FirstOrDefault(b => b.Name != "PopupBorder");
-            
-        // Find ContentPresenter by looking for Panel controls (ContentPresenter inherits from Panel)
-        _comboBoxContentPresenter = ComboBoxControl.GetVisualDescendants()
-            .OfType<Panel>()
-            .FirstOrDefault(c => c.GetType().Name == "ContentPresenter");
         
-        // Wire up pointer events for hover effect
+        // Initialize border brush to prevent default theme overrides
         if (_comboBoxBorder != null)
         {
+            _comboBoxBorder.BorderBrush = new SolidColorBrush(Color.Parse("#555555"));
             _comboBoxBorder.PointerEntered += OnComboBoxPointerEntered;
             _comboBoxBorder.PointerExited += OnComboBoxPointerExited;
         }
         
-        if (_comboBoxContentPresenter != null)
-        {
-            _comboBoxContentPresenter.PointerEntered += OnComboBoxPointerEntered;
-            _comboBoxContentPresenter.PointerExited += OnComboBoxPointerExited;
-        }
+        ComboBoxControl.BorderBrush = new SolidColorBrush(Color.Parse("#555555"));
         
-        // Also wire up on the ComboBox itself as fallback
+        // Wire up pointer events for hover effect
         ComboBoxControl.PointerEntered += OnComboBoxPointerEntered;
         ComboBoxControl.PointerExited += OnComboBoxPointerExited;
     }
     
     private void OnComboBoxPointerEntered(object? sender, PointerEventArgs e)
     {
-        // Set hover background color
+        // Set hover background color and black border
         if (_comboBoxBorder != null)
         {
             _comboBoxBorder.Background = new SolidColorBrush(Color.Parse("#3d3d3d"));
-        }
-        
-        if (_comboBoxContentPresenter != null)
-        {
-            _comboBoxContentPresenter.Background = new SolidColorBrush(Color.Parse("#3d3d3d"));
+            _comboBoxBorder.BorderBrush = new SolidColorBrush(Colors.Black);
         }
         
         ComboBoxControl.Background = new SolidColorBrush(Color.Parse("#3d3d3d"));
+        ComboBoxControl.BorderBrush = new SolidColorBrush(Colors.Black);
     }
     
     private void OnComboBoxPointerExited(object? sender, PointerEventArgs e)
     {
-        // Restore default background color
+        // Restore default background color and border
         if (_comboBoxBorder != null)
         {
             _comboBoxBorder.Background = new SolidColorBrush(Color.Parse("#2d2d2d"));
-        }
-        
-        if (_comboBoxContentPresenter != null)
-        {
-            _comboBoxContentPresenter.Background = new SolidColorBrush(Color.Parse("#1c1c1c"));
+            _comboBoxBorder.BorderBrush = new SolidColorBrush(Color.Parse("#555555"));
         }
         
         ComboBoxControl.Background = new SolidColorBrush(Color.Parse("#2d2d2d"));
+        ComboBoxControl.BorderBrush = new SolidColorBrush(Color.Parse("#555555"));
     }
     
     private void OnDropDownOpened(object? sender, EventArgs e)
