@@ -42,18 +42,6 @@ public partial class Page3 : UserControl
     {
         try
         {
-            // Wire up Load Shader button
-            var loadShaderButton = this.FindControl<Button>("LoadShaderButton");
-            if (loadShaderButton != null)
-            {
-                loadShaderButton.Click += async (_, __) => {
-                    if (_parentWindow != null)
-                    {
-                        await _parentWindow.LoadShaderFiles();
-                    }
-                };
-            }
-            
             // Check if TimelineEditor exists
             var timelineEditor = this.FindControl<TimelineControl.Utils_TimelineEditor>("TimelineEditorControl");
             System.Diagnostics.Debug.WriteLine($"Page3: TimelineEditor found = {timelineEditor != null}");
@@ -65,4 +53,5 @@ public partial class Page3 : UserControl
         }
     }
 }
+
 

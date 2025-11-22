@@ -12,6 +12,11 @@ public partial class Utils_Launchpad : UserControl
     // Pad to row/column mapping (row, column) - rows and columns are 0-indexed internally
     private readonly Dictionary<Button, (int row, int col)> _padMapping = new();
     
+    /// <summary>
+    /// Event fired when a pad is clicked. Passes the pad number (1-32)
+    /// </summary>
+    public event EventHandler<int>? PadClicked;
+    
     public Utils_Launchpad()
     {
         InitializeComponent();
@@ -75,8 +80,11 @@ public partial class Utils_Launchpad : UserControl
             int row = position.row;
             int col = position.col;
             
-            // Pad clicked - can add functionality here later
-            // The bars are now simple continuous bars without divisions
+            // Calculate pad number (1-32): padNumber = row * 8 + col + 1
+            int padNumber = row * 8 + col + 1;
+            
+            // Fire the event to notify subscribers
+            PadClicked?.Invoke(this, padNumber);
         }
     }
 }

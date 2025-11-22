@@ -297,102 +297,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    /// <summary>
-    /// Loads shader files from file picker dialog and imports them to shader directory
-    /// </summary>
-    public async Task LoadShaderFiles()
-    {
-        try
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider is not { } storageProvider)
-            {
-                LogMessage("Unable to access file system - storage provider not available");
-                return;
-            }
-
-            // Configure file picker options
-            var filePickerOptions = new FilePickerOpenOptions
-            {
-                Title = "Select GLSL Shader Files",
-                AllowMultiple = true,
-                FileTypeFilter = new[]
-                {
-                    new FilePickerFileType("GLSL Shader Files")
-                    {
-                        Patterns = new[] { "*.glsl", "*.frag", "*.vert", "*.comp" }
-                    },
-                    new FilePickerFileType("All Files")
-                    {
-                        Patterns = new[] { "*.*" }
-                    }
-                }
-            };
-
-            LogMessage("Opening file dialog to select shader files...");
-            var files = await storageProvider.OpenFilePickerAsync(filePickerOptions);
-
-            if (files.Count == 0)
-            {
-                LogMessage("No files selected");
-                return;
-            }
-
-            LogMessage($"Selected {files.Count} file(s) for import");
-
-            int successCount = 0;
-            int errorCount = 0;
-
-            foreach (var file in files)
-            {
-                try
-                {
-                    var fileName = file.Name;
-                    var destinationPath = System.IO.Path.Combine(_shaderDir, fileName);
-
-                    // Check if file already exists
-                    if (File.Exists(destinationPath))
-                    {
-                        LogMessage($"File '{fileName}' already exists in shaders folder - skipping");
-                        continue;
-                    }
-
-                    // Copy the file to the shaders directory
-                    using var sourceStream = await file.OpenReadAsync();
-                    using var destinationStream = File.Create(destinationPath);
-                    await sourceStream.CopyToAsync(destinationStream);
-
-                    LogMessage($"Successfully imported: {fileName}");
-                    successCount++;
-                }
-                catch (Exception ex)
-                {
-                    LogMessage($"Error importing '{file.Name}': {ex.Message}");
-                    errorCount++;
-                }
-            }
-
-            // Refresh the shader picker if any files were successfully imported
-            if (successCount > 0)
-            {
-                LogMessage($"Import complete: {successCount} files imported, {errorCount} errors");
-                
-                // Refresh the current controls page if it exists
-                if (PageContentControl.Content is Page1 controlsPage)
-                {
-                    PopulatePicker(controlsPage);
-                }
-            }
-            else
-            {
-                LogMessage($"Import failed: {errorCount} errors, no files imported");
-            }
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error during file import: {ex.Message}");
-        }
-    }
+    
     
     // ========================================================================
     // LOGGING SYSTEM - Message logging and log panel management
@@ -663,12 +568,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // ========================================================================
     
     /// <summary>
-    /// Handles touchpad button click (placeholder for future functionality)
+    /// Handles pad click events from the launchpad
     /// </summary>
-    private void OnTouchpadClicked(object? sender, RoutedEventArgs e)
+    private void OnTouchpadClicked(object? sender, int padNumber)
     {
-        LogMessage("Touchpad button clicked!");
-        Console.WriteLine("Touchpad button clicked!");
+        LogMessage($"Pad {padNumber:D2} clicked");
     }
 
     /// <summary>
@@ -938,7 +842,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         var shaderPicker = page.FindControl<Utils_ComboBox>("ShaderPicker");
         var tempoButton = page.FindControl<Button>("TempoButton");
         var resetButton = page.FindControl<Button>("ResetButton");
-        var touchpadButton = page.FindControl<Button>("TouchpadButton");
         
         if (shaderPicker != null)
         {
@@ -971,9 +874,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             resetButton.Click += OnResetButtonClicked;
         }
         
-        if (touchpadButton != null)
+        // Wire up launchpad pad clicks
+        var launchpad = page.FindControl<Utils_Launchpad>("Launchpad");
+        if (launchpad != null)
         {
-            touchpadButton.Click += OnTouchpadClicked;
+            launchpad.PadClicked += OnTouchpadClicked;
         }
         
         // Wire up slot controls
@@ -999,11 +904,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// </summary>
     private void WireUpToolsPage(Page2 page)
     {
-        var browseButton = page.FindControl<Button>("BrowseButton");
-        var upButton = page.FindControl<Button>("UpButton");
-        var openButton = page.FindControl<Button>("OpenButton");
-        var directoryListBox = page.FindControl<ListBox>("DirectoryListBox");
-        var directoryPathTextBox = page.FindControl<TextBox>("DirectoryPathTextBox");
+        var directoryBox = page.FindControl<Utils_DirectoryBox>("DirectoryBox");
+        if (directoryBox == null) return;
+        
+        var browseButton = directoryBox.BrowseButton;
+        var upButton = directoryBox.UpButton;
+        var openButton = directoryBox.OpenButton;
+        var directoryListBox = directoryBox.DirectoryListBox;
+        var directoryPathTextBox = directoryBox.DirectoryPathTextBox;
         
         if (browseButton != null && directoryListBox != null)
         {

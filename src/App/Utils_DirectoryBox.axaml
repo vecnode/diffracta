@@ -1,0 +1,128 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Diffracta"
+             x:Class="Diffracta.Utils_DirectoryBox"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+    
+    <UserControl.Styles>
+        <!-- TextBox styling - match button style -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        
+        <!-- TextBox focus state - override default blue border and black background -->
+        <Style Selector="TextBox:focus">
+            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+        </Style>
+        
+        <!-- TextBox focus state - style the border element in the template -->
+        <Style Selector="TextBox:focus /template/ Border">
+            <Setter Property="Background" Value="#2d2d2d"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+        </Style>
+        
+        <!-- TextBox hover state -->
+        <Style Selector="TextBox:pointerover">
+            <Setter Property="Background" Value="#3d3d3d"/>
+            <Setter Property="BorderBrush" Value="#000000"/>
+        </Style>
+        
+        <!-- TextBox hover state - style the border element in the template -->
+        <Style Selector="TextBox:pointerover /template/ Border">
+            <Setter Property="Background" Value="#3d3d3d"/>
+            <Setter Property="BorderBrush" Value="#000000"/>
+        </Style>
+        
+    </UserControl.Styles>
+    
+    <!-- Browse Directory -->
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.5*"/>
+            <ColumnDefinition Width="0.5*"/>
+        </Grid.ColumnDefinitions>
+        
+        <Border BorderBrush="#555555" BorderThickness="1" CornerRadius="2" Padding="8" Margin="0,0,0,0" 
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                ClipToBounds="True">
+            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+            
+            <StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="0" Margin="0,0,0,8">
+                <TextBox x:Name="DirectoryPathTextBox"
+                        Width="200"
+                        Height="30"
+                        Text="C:\Users\"
+                        Background="#2d2d2d"
+                        Foreground="White"
+                        BorderBrush="#555555"
+                        BorderThickness="1"
+                        CornerRadius="2"
+                        FontSize="12"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Left"
+                        VerticalContentAlignment="Center"
+                        Padding="8,0"/>
+                <Button x:Name="BrowseButton" 
+                        Content="Browse" 
+                        Height="30"/>
+                <Button x:Name="UpButton" 
+                        Content="↑" 
+                        Width="30"
+                        Height="30"
+                        FontSize="12"/>
+                <Button x:Name="OpenButton" 
+                        Content="Open" 
+                        Height="30"/>
+            </StackPanel>
+            
+            <Border Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    ClipToBounds="True">
+                <ListBox x:Name="DirectoryListBox" 
+                        Background="#2d2d2d"
+                        Foreground="White"
+                        BorderBrush="#555555"
+                        BorderThickness="1"
+                        CornerRadius="2"
+                        Margin="0,0,0,0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Height" Value="24"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontSize" Value="12"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected">
+                            <Setter Property="Background" Value="#4A4A4A"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:pointerover">
+                            <Setter Property="Background" Value="#1A1A1A"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Style>
+                    </ListBox.Styles>
+                </ListBox>
+            </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
+

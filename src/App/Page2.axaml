@@ -2,78 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Diffracta"
              x:Class="Diffracta.Page2">
-    <ScrollViewer Margin="8">
-        <StackPanel Spacing="12">
-
-            <!-- Browse Directory -->
-            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="0" Padding="8" Margin="0,16,0,0" Width="500" HorizontalAlignment="Left">
-                <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBox x:Name="DirectoryPathTextBox"
-                            Width="200"
-                            Height="30"
-                            Text="C:\Users\"
-                            Background="#2D2D2D"
-                            Foreground="White"
-                            BorderBrush="Gray"
-                            BorderThickness="1"
-                            CornerRadius="0"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Left"
-                            VerticalContentAlignment="Center"
-                            Padding="8,0"/>
-                    <Button x:Name="BrowseButton" 
-                            Content="Browse" 
-                            Height="30"/>
-                    <Button x:Name="UpButton" 
-                            Content="↑" 
-                            Width="30"
-                            Height="30"
-                            FontSize="16"/>
-                    <Button x:Name="OpenButton" 
-                            Content="Open" 
-                            Height="30"/>
-                </StackPanel>
-                
-                <ListBox x:Name="DirectoryListBox" 
-                        Height="200"
-                        Background="#2D2D2D"
-                        Foreground="White"
-                        BorderBrush="Gray"
-                        BorderThickness="1"
-                        CornerRadius="0"
-                        Margin="0,0,0,0">
-                    <ListBox.Styles>
-                        <Style Selector="ListBoxItem">
-                            <Setter Property="Height" Value="24"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:selected">
-                            <Setter Property="Background" Value="#4A4A4A"/>
-                        </Style>
-                        <Style Selector="ListBoxItem:pointerover">
-                            <Setter Property="Background" Value="#1A1A1A"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Style>
-                    </ListBox.Styles>
-                </ListBox>
-                </StackPanel>
-            </Border>
-            
-            <!-- Import Shader File -->
-            <StackPanel Spacing="8" Margin="0,16,0,0">
-                <TextBlock Text="Import Shader File" Foreground="White" FontSize="14"/>
-                <Button x:Name="LoadShaderButton" 
-                        Content="Open" 
-                        Width="200" 
-                        Height="30"/>
-            </StackPanel>
-            
-            
-        </StackPanel>
-    </ScrollViewer>
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <local:Utils_DirectoryBox x:Name="DirectoryBox" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+    </Grid>
 </UserControl>
 
 
