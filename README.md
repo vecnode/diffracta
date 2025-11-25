@@ -7,7 +7,7 @@ This repository contains Diffracta, a desktop application for live video editing
 ### Build desktop app on Windows 11
 
 ```powershell
-# Option 1: PowerShell Scripts (Recommended)
+# Option 1: Automated Build (Recommended)
 # First time setup
 .\update.ps1
 .\start.ps1
