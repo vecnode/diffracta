@@ -55,11 +55,3 @@ docker build -t diffracta:latest .
 docker run --rm -e DISPLAY='host.docker.internal:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 ```
 
-### Roadmap
-
-Short-term tasks for version 0.1
-- On the right column of "Utils_DirectoryBox" create "Utils_MediaManagement" with a new button -> to add paths, and convert.
-- Develop a method to embed hundreds of videos from folder, formatting, compress new format?, that will match the loaded shaders too.
-- Develop a track-based solo system independent from main and post-production shaders.
-- Match pipeline viewport when loading shaders, state-based update of frame.
-
