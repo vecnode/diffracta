@@ -9,22 +9,6 @@
   
 
 
-  <Window.Resources>
-    <!-- Custom Thumb Template for Square Thumb -->
-    <ControlTheme x:Key="SquareThumbTheme" TargetType="Thumb">
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="#888888"
-                  BorderBrush="#666666"
-                  BorderThickness="1"
-                  CornerRadius="0"
-                  Width="18"
-                  Height="32"/>
-        </ControlTemplate>
-      </Setter>
-    </ControlTheme>
-  </Window.Resources>
-  
   <Window.Styles>
     <StyleInclude Source="avares://Diffracta/Utils_Slider.axaml"/>
     <StyleInclude Source="avares://Diffracta/Utils_Button.axaml"/>
@@ -243,12 +227,9 @@
                                          Value="0"
                                          ShowProgressText="True"
                                          Foreground="#ff8c00"
+                                         FontSize="12"
                                          CornerRadius="0"/>
-                            
-                            <TextBlock Text="Shader Information" Foreground="White" FontSize="12"/>
-                            <TextBlock x:Name="ShaderInfoText" Text="No shader loaded" Foreground="#cccccc" FontSize="12" TextWrapping="Wrap"/>
-                            
-                            
+
                             
                         </StackPanel>
                     </ScrollViewer>

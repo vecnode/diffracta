@@ -23,8 +23,8 @@ permission, provided they are truthful and non-misleading:
   descriptive, and non-confusing manner (nominative fair use).
 - Distributing unmodified copies of the official Diffracta source
   code or binaries.
-- Educational uses such as tutorials, documentation, reviews, or
-  videos, so long as they clearly do **not** imply endorsement.
+- Educational uses such as: 1) tutorials, 2) documentation, 3) 
+  reviews, 4) workshops, 5) videos.
 
 These uses must not:
 - Suggest sponsorship or affiliation.
@@ -51,5 +51,3 @@ protected by trademark law. They may not be:
 - Used on websites or products for marketing purposes,
 - Incorporated into new logos or visual identities.
 
-Descriptive or comparative references (e.g. “Based on Diffracta”)
-are allowed only as text and must comply with Sections 2 and 4.

@@ -2,6 +2,22 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   
+  <Styles.Resources>
+    <!-- Custom Thumb Template for Square Thumb -->
+    <ControlTheme x:Key="SquareThumbTheme" TargetType="Thumb">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="#888888"
+                  BorderBrush="#666666"
+                  BorderThickness="1"
+                  CornerRadius="0"
+                  Width="18"
+                  Height="32"/>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+  </Styles.Resources>
+  
   <!-- Simple Horizontal Slider Style -->
   <Style Selector="Slider:horizontal">
     <Setter Property="MinWidth" Value="32" />

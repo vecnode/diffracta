@@ -1,8 +1,6 @@
 # Diffracta Application Launcher
-# Single script that handles everything with proper privileges
 
 $ErrorActionPreference = 'Stop'
-
 
 # Set execution policy for this process (Windows only)
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
@@ -20,32 +18,25 @@ function Cleanup {
     } | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
-# Register cleanup on script exit
-Register-EngineEvent PowerShell.Exiting -Action { Cleanup }
+# Register cleanup on script exit (suppress job output)
+$null = Register-EngineEvent PowerShell.Exiting -Action { Cleanup }
 
 # Check if .NET is available
 try {
     $dotnetVersion = dotnet --version
     Write-Host "Using .NET SDK: $dotnetVersion" -ForegroundColor Yellow
 } catch {
-    Write-Host "Error: .NET SDK not found. Please run .\update.ps1 first to set up the environment." -ForegroundColor Red
+    Write-Host "Error: .NET SDK not found." -ForegroundColor Red
     exit 1
 }
 
 # Check if project exists
 if (-not (Test-Path "src/App/Diffracta.csproj")) {
-    Write-Host "Error: Project file not found. Please run this script from the project root directory." -ForegroundColor Red
+    Write-Host "Error: Project file not found." -ForegroundColor Red
     exit 1
 }
 
-# Ensure Shaders directory exists
-$shadersDir = "src/App/Shaders"
-if (-not (Test-Path $shadersDir)) {
-    Write-Host "Creating Shaders directory: $shadersDir" -ForegroundColor Yellow
-}
-
 try {
-
     # Restore packages to local cache first
     Write-Host "Restoring packages to local cache" -ForegroundColor Yellow
     dotnet restore src/App/Diffracta.csproj --packages ./cache
@@ -59,7 +50,6 @@ try {
 }
 catch {
     Write-Host "Error running application: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Try running .\update.ps1 to set up the environment first." -ForegroundColor Yellow
     exit 1
 }
 

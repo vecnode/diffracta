@@ -417,7 +417,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
         UpdateTabContent();
     }
-
+    
     /// <summary>
     /// Exits performance mode: restores UI panels and normal window layout
     /// </summary>
@@ -652,23 +652,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// </summary>
     private void UpdateTabContent()
     {
-        // Update Info tab - get current shader from the controls page
-        if (PageContentControl.Content is Page1 controlsPage)
-        {
-            var shaderPicker = controlsPage.FindControl<Utils_ComboBox>("ShaderPicker");
-            var shaderInfoText = this.FindControl<TextBlock>("ShaderInfoText");
-            
-            if (shaderPicker?.SelectedItem is string selectedShader && shaderInfoText != null)
-            {
-                var fullPath = System.IO.Path.Combine(_shaderDir, selectedShader);
-                var fileInfo = new FileInfo(fullPath);
-                shaderInfoText.Text = $"Current: {selectedShader}\nSize: {fileInfo.Length} bytes\nModified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
-            }
-            else if (shaderInfoText != null)
-            {
-                shaderInfoText.Text = "No shader loaded";
-            }
-        }
 
         // Populate MIDI devices list in Global tab
         var midiList = this.FindControl<ListBox>("MidiDevicesList");

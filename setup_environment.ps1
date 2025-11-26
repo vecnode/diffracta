@@ -43,50 +43,55 @@ try {
     exit 1
 }
 
-# List installed packages
+# List installed packages and extract package names
 Write-Host "`nInstalled packages:" -ForegroundColor Yellow
+$packageListOutput = $null
 try {
-    dotnet list src/App/Diffracta.csproj package
+    $packageListOutput = dotnet list src/App/Diffracta.csproj package
+    $packageListOutput | Write-Host
 } catch {
     Write-Host "Could not list packages: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
 }
 
-# Check for required packages
+# Extract required packages from dotnet list output
 Write-Host "`nChecking for required packages" -ForegroundColor Yellow
-$requiredPackages = @(
-    "Avalonia",
-    "Avalonia.Desktop",
-    "Avalonia.Themes.Fluent",
-    "Avalonia.Diagnostics"
-)
+$requiredPackages = @()
 
-$missingPackages = @()
-foreach ($package in $requiredPackages) {
-    try {
-        $result = dotnet list src/App/Diffracta.csproj package | Select-String $package
-        if ($result) {
-            Write-Host "$package" -ForegroundColor Green
-        } else {
-            $missingPackages += $package
-            Write-Host "$package (missing)" -ForegroundColor Red
+if ($packageListOutput) {
+    # Parse the output: lines starting with ">" contain package references
+    # Format: "> PackageName    Version    Version"
+    foreach ($line in $packageListOutput) {
+        if ($line -match '^\s*>\s+(\S+)') {
+            $packageName = $matches[1]
+            if ($packageName -and $packageName -ne "Top-level") {
+                $requiredPackages += $packageName
+            }
         }
-    } catch {
-        $missingPackages += $package
-        Write-Host "$package (check failed)" -ForegroundColor Red
     }
 }
 
-if ($missingPackages.Count -gt 0) {
-    Write-Host "`nInstalling missing packages to local cache" -ForegroundColor Yellow
-    foreach ($package in $missingPackages) {
-        try {
-            Write-Host "Installing $package to local cache" -ForegroundColor Yellow
-            dotnet add src/App/Diffracta.csproj package $package
-            Write-Host "$package installed to local cache" -ForegroundColor Green
-        } catch {
-            Write-Host "Failed to install $package`: $($_.Exception.Message)" -ForegroundColor Red
+if ($requiredPackages.Count -eq 0) {
+    Write-Host "Warning: Could not extract package names from dotnet list output" -ForegroundColor Yellow
+    Write-Host "Falling back to manual package check" -ForegroundColor Yellow
+    # Fallback: check if packages exist in .csproj by trying to list them
+    $fallbackPackages = @("Avalonia", "Avalonia.Desktop", "Avalonia.Themes.Fluent", "Avalonia.Diagnostics", "FFMpegCore", "Melanchall.DryWetMidi")
+    foreach ($pkg in $fallbackPackages) {
+        $found = $packageListOutput | Select-String -Pattern "^\s*>\s+$pkg\s"
+        if ($found) {
+            $requiredPackages += $pkg
         }
     }
+}
+
+if ($requiredPackages.Count -eq 0) {
+    Write-Host "Error: No packages found. Please check your .csproj file." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Found $($requiredPackages.Count) package(s) in project:" -ForegroundColor Cyan
+foreach ($package in $requiredPackages) {
+    Write-Host "  - $package" -ForegroundColor Green
 }
 
 # Build the project
@@ -97,10 +102,6 @@ try {
         Write-Host "Project built successfully" -ForegroundColor Green
     } else {
         Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
-        Write-Host "Common issues:" -ForegroundColor Yellow
-        Write-Host "- FluentTheme syntax errors (fixed in this version)" -ForegroundColor Cyan
-        Write-Host "- OpenGL method signature mismatches (fixed in this version)" -ForegroundColor Cyan
-        Write-Host "- Missing using statements (fixed in this version)" -ForegroundColor Cyan
         exit 1
     }
 } catch {
@@ -110,7 +111,8 @@ try {
 }
 
 Write-Host "`n=== Environment Setup Complete ===" -ForegroundColor Green
-Write-Host "Packages are now stored locally in: ./cache" -ForegroundColor Cyan
-Write-Host "You can now run the application using: .\start.ps1" -ForegroundColor Cyan
+Write-Host "Packages are now stored locally in: .\cache" -ForegroundColor Cyan
+Write-Host "You can now run the application using: .\start.bat" -ForegroundColor Cyan
 Write-Host "Or directly with: dotnet run --project src/App/Diffracta.csproj" -ForegroundColor Cyan
+
 
