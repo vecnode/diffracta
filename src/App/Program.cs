@@ -1,34 +1,33 @@
 using Avalonia;
+using System;
 using System.Threading.Tasks;
 
 namespace Diffracta;
 
 internal static class Program {
-    private static ApiService? _apiService;
+    public static ApiService? ApiService { get; private set; }
 
     [STAThread]
     public static void Main(string[] args)
     {
-        // Start the REST API server in the background
-        _apiService = new ApiService("http://localhost:5000");
+        // Start the REST API server in the background (fire-and-forget, zero UI delay)
+        ApiService = new ApiService("http://localhost:5000");
         _ = Task.Run(async () =>
         {
             try
             {
-                await _apiService.StartAsync();
+                await ApiService.StartAsync().ConfigureAwait(false);
                 Console.WriteLine("REST API server started at http://localhost:5000");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to start API server: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"API Server Error: {ex}");
             }
         });
 
-        // Start the Avalonia UI application
+        // Start the Avalonia UI application immediately (no delay)
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-
-        // Cleanup: Stop the API server when the application exits
-        _apiService?.StopAsync().Wait(TimeSpan.FromSeconds(5));
     }
 
     public static AppBuilder BuildAvaloniaApp()

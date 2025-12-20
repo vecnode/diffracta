@@ -28,11 +28,11 @@ public class ApiService
     /// <summary>
     /// Starts the web server in a background task.
     /// </summary>
-    public async Task StartAsync()
+    public Task StartAsync()
     {
         if (_app != null)
         {
-            return; // Already started
+            return Task.CompletedTask; // Already started
         }
 
         _cancellationTokenSource = new CancellationTokenSource();
@@ -62,12 +62,16 @@ public class ApiService
         // Register API endpoints
         RegisterEndpoints(_app);
 
-        // Start the server in a background task
+        // Start the server in a background task (non-blocking)
         _serverTask = Task.Run(async () =>
         {
             try
             {
-                await _app.RunAsync(_cancellationTokenSource.Token);
+                await _app.RunAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when shutting down
             }
             catch (Exception ex)
             {
@@ -75,42 +79,60 @@ public class ApiService
             }
         }, _cancellationTokenSource.Token);
 
-        // Give it a moment to start
-        await Task.Delay(500);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Stops the web server.
+    /// Cancels the web server immediately (synchronous, instant shutdown).
     /// </summary>
-    public async Task StopAsync()
+    public void Cancel()
     {
         if (_cancellationTokenSource != null)
         {
             _cancellationTokenSource.Cancel();
         }
 
-        if (_app != null)
+        // Fire-and-forget cleanup in background (don't wait)
+        _ = Task.Run(async () =>
         {
-            await _app.StopAsync();
-            await _app.DisposeAsync();
-            _app = null;
-        }
+            try
+            {
+                if (_app != null)
+                {
+                    await _app.StopAsync().ConfigureAwait(false);
+                    await _app.DisposeAsync().ConfigureAwait(false);
+                    _app = null;
+                }
 
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+            }
+            catch
+            {
+                // Ignore cleanup errors on shutdown
+            }
+        });
+    }
+
+    /// <summary>
+    /// Stops the web server gracefully (for explicit shutdown scenarios).
+    /// </summary>
+    public async Task StopAsync()
+    {
+        Cancel();
+        
+        // Wait briefly for cleanup (with timeout)
         if (_serverTask != null)
         {
             try
             {
-                await _serverTask;
+                await Task.WhenAny(_serverTask, Task.Delay(100)).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch
             {
-                // Expected when cancelling
+                // Ignore
             }
-            _serverTask = null;
         }
-
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
     }
 
     private void RegisterEndpoints(WebApplication app)

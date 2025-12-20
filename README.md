@@ -15,6 +15,21 @@ This repository contains Diffracta, a desktop application for live video editing
 dotnet restore src/App/Diffracta.csproj
 dotnet build src/App/Diffracta.csproj
 dotnet run --project src/App/Diffracta.csproj
+
+# Build as Release (for distribution)
+
+```powershell
+# Publish Release build for Windows x64
+dotnet publish src/App/Diffracta.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ./publish/win-x64
+# Publish as single executable
+dotnet publish src/App/Diffracta.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish/win-x64-single
+
+# Publish for Linux x64
+dotnet publish src/App/Diffracta.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=false -o ./publish/linux-x64
+# Publish for macOS (Intel)
+dotnet publish src/App/Diffracta.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=false -o ./publish/osx-x64
+# Publish for macOS (Apple Silicon)
+dotnet publish src/App/Diffracta.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=false -o ./publish/osx-arm64
 ```
 
 ### Requirements

@@ -52,7 +52,15 @@ public partial class App : Application {
             
             // Register MainWindow instance with API endpoints so they can access it
             ApiEndpoints.MainWindow = mainWindow;
+            
+            // Hook into exit event for instant API shutdown
+            desktop.Exit += (sender, e) =>
+            {
+                // Cancel API server immediately (synchronous cancel, instant shutdown)
+                Program.ApiService?.Cancel();
+            };
         }
         base.OnFrameworkInitializationCompleted();
     }
 }
+
