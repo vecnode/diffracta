@@ -24,7 +24,6 @@ It is built using .NET and [Avalonia UI](https://avaloniaui.net/)
 ```
 [net8.0]: 
 Packages in use:
-
 •  Avalonia 11.3.5
 •  Avalonia.Desktop 11.3.5
 •  Avalonia.Diagnostics 11.3.5
@@ -32,14 +31,14 @@ Packages in use:
 •  FFMpegCore 5.4.0
 •  Melanchall.DryWetMidi 8.0.2
 
+Included as FrameworkReference: 
+•  ASP.NET Core (REST API)
 ```
 
-### Build/Run Docker on Windows 11/WSL
+### Docker on Windows 11/WSL
 
 ```sh
-# Enable WSL2 and Virtual Machine Platform (recommended)
-# If Docker Desktop does not detect a Hypervisor and stops running,
-# Run PowerShell as Administrator:
+# If Docker Desktop does not detect a Hypervisor and stops running run PowerShell as Administrator:
 dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
 # Enable Virtual Machine Platform (required for WSL2)
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart

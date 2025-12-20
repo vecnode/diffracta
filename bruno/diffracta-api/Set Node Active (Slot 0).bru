@@ -1,0 +1,17 @@
+meta {
+  name: Set Node Active (Slot 0)
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5000/api/nodes/0/active
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "active": true
+  }
+}

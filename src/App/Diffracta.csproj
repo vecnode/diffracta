@@ -36,6 +36,10 @@
         <PackageReference Include="Melanchall.DryWetMidi" Version="8.0.2" />
     </ItemGroup>
 
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
     <!-- ship shaders next to the exe -->
     <ItemGroup>
         <None Update="Shaders\*.glsl">

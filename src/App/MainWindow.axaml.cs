@@ -80,6 +80,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     public new event PropertyChangedEventHandler? PropertyChanged;
     
     // ========================================================================
+    // PUBLIC PROPERTIES - For API access
+    // ========================================================================
+    
+    /// <summary>
+    /// Gets whether performance mode is currently active.
+    /// </summary>
+    public bool IsPerformanceMode => _isPerformanceMode;
+    
+    // ========================================================================
     // CONSTRUCTOR - Initialize window and wire up event handlers
     // ========================================================================
     
@@ -345,7 +354,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// <summary>
     /// Toggles between normal and performance mode
     /// </summary>
-    private void TogglePerformanceMode() {
+    public void TogglePerformanceMode() {
         if (_isPerformanceMode) {
             ExitPerformanceMode();
         } else {

@@ -94,6 +94,8 @@ foreach ($package in $requiredPackages) {
     Write-Host "  - $package" -ForegroundColor Green
 }
 
+Write-Host "`nNote: ASP.NET Core is included as a FrameworkReference (not a PackageReference)" -ForegroundColor Cyan
+
 # Build the project
 Write-Host "`nBuilding project" -ForegroundColor Yellow
 try {

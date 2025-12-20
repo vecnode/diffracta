@@ -1,0 +1,17 @@
+meta {
+  name: Set Node Value (Slot 0)
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:5000/api/nodes/0/value
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "value": 0.5
+  }
+}

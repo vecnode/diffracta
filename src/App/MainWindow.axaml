@@ -8,7 +8,6 @@
         Width="1280" Height="800" Title="Diffracta (v0.1) 720p MainWindow">
   
 
-
   <Window.Styles>
     <StyleInclude Source="avares://Diffracta/Utils_Slider.axaml"/>
     <StyleInclude Source="avares://Diffracta/Utils_Button.axaml"/>

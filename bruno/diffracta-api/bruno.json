@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "Diffracta API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.0011110305786132812,
+  "filesCount": 8,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": ""
+  }
+}

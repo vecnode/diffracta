@@ -47,7 +47,11 @@ public partial class App : Application {
 
     public override void OnFrameworkInitializationCompleted() {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            desktop.MainWindow = new MainWindow();
+            var mainWindow = new MainWindow();
+            desktop.MainWindow = mainWindow;
+            
+            // Register MainWindow instance with API endpoints so they can access it
+            ApiEndpoints.MainWindow = mainWindow;
         }
         base.OnFrameworkInitializationCompleted();
     }
