@@ -16,9 +16,6 @@ dotnet restore src/App/Diffracta.csproj
 dotnet build src/App/Diffracta.csproj
 dotnet run --project src/App/Diffracta.csproj
 
-# Build as Release (for distribution)
-
-```powershell
 # Publish Release build for Windows x64
 dotnet publish src/App/Diffracta.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ./publish/win-x64
 # Publish as single executable
