@@ -81,8 +81,8 @@ docker build -f Dockerfile -t diffracta:latest ..
 # Get your Windows host IP
 ipconfig | findstr IPv4
 # Run with host network mode (best compatibility):
-docker run --rm --network host -e DISPLAY='192.168.1.5:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
-# Replace 192.168.1.5 with your actual IP from the previous command
+# Replace <YOUR_IP> with your actual IP address from the previous command
+docker run --rm --network host -e DISPLAY='<YOUR_IP>:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 ```
 
 **Note**: Running GUI applications in Docker on Windows requires an X server. The application will start its REST API server, but the GUI window will only appear if X11 forwarding is properly configured.
