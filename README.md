@@ -49,8 +49,18 @@ Included as FrameworkReference:
 
 ### Docker on Windows 11/WSL
 
+Prerequisites:
+1. Install an X server on Windows (required for GUI display):
+   - VcXsrv
+
+2. Configure X server:
+   - Start VcXsrv/X410/Xming
+   - **Important**: Enable "Disable access control" or "Allow connections from network clients"
+   - Display number is usually `:0` (default)
+
 ```sh
-# If Docker Desktop does not detect a Hypervisor and stops running run PowerShell as Administrator:
+# Troubleshooting: If Docker Desktop does not detect a Hypervisor, run PowerShell as Administrator:
+# Enable Windows Subsystem for Linux
 dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
 # Enable Virtual Machine Platform (required for WSL2)
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
@@ -59,10 +69,21 @@ wsl --set-default-version 2
 # Restart your computer
 Restart-Computer
 
-# Build the image and launch the app
-# 1) Build the image
-docker build -t diffracta:latest .
-# 5) Run the container (prefer host.docker.internal; fall back to host IP)
-docker run --rm -e DISPLAY='host.docker.internal:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
+# Navigate to docker folder
+cd docker/
+# Build the image (using parent directory as build context)
+docker build -f Dockerfile -t diffracta:latest ..
+
+# Run the container (EASIEST - use the helper script):
+.\run_with_xserver.ps1
+
+# OR manually run with your IP address:
+# Get your Windows host IP
+ipconfig | findstr IPv4
+# Run with host network mode (best compatibility):
+docker run --rm --network host -e DISPLAY='192.168.1.5:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
+# Replace 192.168.1.5 with your actual IP from the previous command
 ```
+
+**Note**: Running GUI applications in Docker on Windows requires an X server. The application will start its REST API server, but the GUI window will only appear if X11 forwarding is properly configured.
 

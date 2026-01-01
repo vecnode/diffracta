@@ -14,3 +14,7 @@ cache/
 *.user
 *.swp
 *.DS_Store
+
+# Docker folder itself
+docker/
+

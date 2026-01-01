@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 ARG DOTNET_VERSION=8.0
 
 ########################
@@ -9,32 +8,52 @@ FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
 # Set working directory
 WORKDIR /src
 
+# Copy NuGet configuration files first (needed for restore)
+COPY NuGet.config .
+COPY Directory.Build.props .
+
 # Copy only the project file first to leverage Docker layer caching for restore
-COPY src/App/Diffracta.csproj src/App/
+COPY src/App/Diffracta.csproj App/
 
 # Restore dependencies
-RUN dotnet restore src/App/Diffracta.csproj
+# Override RestorePackagesPath to use default NuGet cache (ignore local cache)
+# Also add nuget.org source explicitly in case NuGet.config has issues
+RUN dotnet restore App/Diffracta.csproj \
+    -p:RestorePackagesPath=/root/.nuget/packages \
+    --source https://api.nuget.org/v3/index.json
+
+# Copy assets folder (referenced by project as ../../assets/)
+COPY assets/ /assets/
 
 # Now copy the rest of the source (cache, bin, obj will be excluded via .dockerignore)
-COPY . .
+COPY src/App/ App/
 
-# Build the application
-RUN dotnet build src/App/Diffracta.csproj -c Release --no-restore
+# Build the application (restore again to ensure packages are available)
+RUN dotnet build App/Diffracta.csproj -c Release -p:RestorePackagesPath=/root/.nuget/packages
 
 # Publish the application for Linux (Docker containers run Linux)
 # Force framework-dependent DLL output (no native apphost) so ENTRYPOINT 'dotnet Diffracta.dll' works
-RUN dotnet publish src/App/Diffracta.csproj \
+RUN dotnet publish App/Diffracta.csproj \
     -c Release \
     -r linux-x64 \
     --self-contained false \
     -p:UseAppHost=false \
-    -o /app/publish \
-    --no-restore
+    -p:RestorePackagesPath=/root/.nuget/packages \
+    -o /app/publish
+
+# Ensure shaders are copied to publish output (csproj should handle this, but verify/copy explicitly)
+RUN if [ -d "App/Shaders" ]; then \
+        cp -r App/Shaders /app/publish/Shaders || true; \
+        echo "Shaders copied to publish output"; \
+    else \
+        echo "Warning: Shaders directory not found in source"; \
+    fi
 
 ########################
 # Step 2: Runtime stage - Create final image with published app
 ########################
-FROM mcr.microsoft.com/dotnet/runtime:${DOTNET_VERSION} AS final
+# Use aspnet runtime image to include ASP.NET Core framework (required by FrameworkReference)
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS final
 
 # Install dependencies for GUI (Avalonia/X11)
 RUN apt-get update && \
@@ -61,3 +80,4 @@ USER appuser
 
 # Set entrypoint to run the application
 ENTRYPOINT ["dotnet", "Diffracta.dll"]
+
