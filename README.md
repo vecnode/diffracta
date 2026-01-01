@@ -50,12 +50,10 @@ Included as FrameworkReference:
 ### Docker on Windows 11/WSL
 
 Prerequisites:
-1. Install an X server on Windows (required for GUI display):
-   - VcXsrv
-
+1. Install an X server on Windows required for GUI display (VcXsrv)
 2. Configure X server:
    - Start VcXsrv/X410/Xming
-   - **Important**: Enable "Disable access control" or "Allow connections from network clients"
+   - Important: Enable "Disable access control" or "Allow connections from network clients"
    - Display number is usually `:0` (default)
 
 ```sh
@@ -73,15 +71,9 @@ Restart-Computer
 cd docker/
 # Build the image (using parent directory as build context)
 docker build -f Dockerfile -t diffracta:latest ..
-
 # Run the container (EASIEST - use the helper script):
 .\run_with_xserver.ps1
-
-# OR manually run with your IP address:
-# Get your Windows host IP
-ipconfig | findstr IPv4
 # Run with host network mode (best compatibility):
-# Replace <YOUR_IP> with your actual IP address from the previous command
 docker run --rm --network host -e DISPLAY='<YOUR_IP>:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 ```
 

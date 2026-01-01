@@ -25,6 +25,12 @@ RUN dotnet restore App/Diffracta.csproj \
 # Copy assets folder (referenced by project as ../../assets/)
 COPY assets/ /assets/
 
+# Copy Shaders folder (now at src/Shaders)
+COPY src/Shaders/ Shaders/
+
+# Copy Media folder (now at src/Media)
+COPY src/Media/ Media/
+
 # Now copy the rest of the source (cache, bin, obj will be excluded via .dockerignore)
 COPY src/App/ App/
 
@@ -42,11 +48,19 @@ RUN dotnet publish App/Diffracta.csproj \
     -o /app/publish
 
 # Ensure shaders are copied to publish output (csproj should handle this, but verify/copy explicitly)
-RUN if [ -d "App/Shaders" ]; then \
-        cp -r App/Shaders /app/publish/Shaders || true; \
+RUN if [ -d "Shaders" ]; then \
+        cp -r Shaders /app/publish/Shaders || true; \
         echo "Shaders copied to publish output"; \
     else \
         echo "Warning: Shaders directory not found in source"; \
+    fi
+
+# Ensure media files are copied to publish output (csproj should handle this, but verify/copy explicitly)
+RUN if [ -d "Media" ]; then \
+        cp -r Media /app/publish/Media || true; \
+        echo "Media copied to publish output"; \
+    else \
+        echo "Warning: Media directory not found in source"; \
     fi
 
 ########################

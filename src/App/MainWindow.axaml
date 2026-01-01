@@ -9,9 +9,9 @@
   
 
   <Window.Styles>
-    <StyleInclude Source="avares://Diffracta/Utils_Slider.axaml"/>
-    <StyleInclude Source="avares://Diffracta/Utils_Button.axaml"/>
-    <StyleInclude Source="avares://Diffracta/Utils_MenuBar.axaml"/>
+    <StyleInclude Source="avares://Diffracta/Utils/Utils_Slider.axaml"/>
+    <StyleInclude Source="avares://Diffracta/Utils/Utils_Button.axaml"/>
+    <StyleInclude Source="avares://Diffracta/Utils/Utils_MenuBar.axaml"/>
     
     <Style Selector="TextBox#LogTextBox">
       <Setter Property="Background" Value="Transparent"/>

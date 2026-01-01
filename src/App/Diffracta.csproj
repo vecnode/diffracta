@@ -42,7 +42,8 @@
 
     <!-- ship shaders next to the exe -->
     <ItemGroup>
-        <None Update="Shaders\*.glsl">
+        <None Include="../Shaders/**/*.glsl">
+            <Link>Shaders\%(RecursiveDir)%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
@@ -59,13 +60,18 @@
 
     <!-- Include media files as embedded resources -->
     <ItemGroup>
-        <AvaloniaResource Include="Media\**\*" />
-        <AvaloniaResource Include="Utils_Slider.axaml" />
+        <AvaloniaResource Include="../Media/**/*">
+            <Link>Media\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        </AvaloniaResource>
+        <AvaloniaResource Include="Utils/Utils_Slider.axaml" />
+        <AvaloniaResource Include="Utils/Utils_Button.axaml" />
+        <AvaloniaResource Include="Utils/Utils_MenuBar.axaml" />
     </ItemGroup>
 
     <!-- Also copy video file to output so MediaPlayer can access via file:// -->
     <ItemGroup>
-        <None Include="Media\default\vid_sd_960_506_24fps.mp4">
+        <None Include="../Media/default/vid_sd_960_506_24fps.mp4">
+            <Link>Media/default/vid_sd_960_506_24fps.mp4</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
