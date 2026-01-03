@@ -86,6 +86,11 @@
                 <Button x:Name="OpenButton" 
                         Content="Open" 
                         Height="30"/>
+                <Button x:Name="AddToWatchedButton" 
+                        Content=">" 
+                        Width="30"
+                        Height="30"
+                        FontSize="12"/>
             </StackPanel>
             
             <Border Grid.Row="1"

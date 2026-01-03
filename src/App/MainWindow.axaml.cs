@@ -73,6 +73,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private string _currentDirectoryPath = string.Empty;
     private readonly List<string> _fullDirectoryItems = new();
     
+    // Global media directories list (accessible from all pages)
+    private readonly ObservableCollection<string> _mediaDirectories = new();
+    
     // ========================================================================
     // PUBLIC EVENTS
     // ========================================================================
@@ -87,6 +90,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// Gets whether performance mode is currently active.
     /// </summary>
     public bool IsPerformanceMode => _isPerformanceMode;
+    
+    /// <summary>
+    /// Gets the global list of media directory paths (accessible from all pages).
+    /// </summary>
+    public ObservableCollection<string> MediaDirectories => _mediaDirectories;
+    
+    /// <summary>
+    /// Adds a directory path to the media directories list if it doesn't already exist.
+    /// </summary>
+    public void AddMediaDirectory(string directoryPath)
+    {
+        if (!string.IsNullOrWhiteSpace(directoryPath) && 
+            System.IO.Directory.Exists(directoryPath) && 
+            !_mediaDirectories.Contains(directoryPath))
+        {
+            _mediaDirectories.Add(directoryPath);
+            LogMessage($"Added media directory: {directoryPath}");
+        }
+    }
     
     // ========================================================================
     // CONSTRUCTOR - Initialize window and wire up event handlers
@@ -372,6 +394,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Hide all UI panels but keep the shader surface visible
         MenuBar.IsVisible = false;
         LeftSidebar.IsVisible = false;
+        PageSelectorBar.IsVisible = false;
         TopToolbar.IsVisible = false;
         ControlsPanel.IsVisible = false;
         VerticalSplitter.IsVisible = false;
@@ -381,7 +404,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         TopRightPanel.SetValue(Grid.RowProperty, 0);
         TopRightPanel.SetValue(Grid.ColumnProperty, 0);
         TopRightPanel.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows
-        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 3);
+        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 4); // Spans all 4 columns
         
         // Hide the tabbed panel part (row 2) and splitter (row 1), show only shader surface (row 0)
         // We'll do this by making the shader surface row take all space
@@ -442,7 +465,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         
         // Restore TopRightPanel to normal position
         TopRightPanel.SetValue(Grid.RowProperty, 2);
-        TopRightPanel.SetValue(Grid.ColumnProperty, 2);
+        TopRightPanel.SetValue(Grid.ColumnProperty, 3);
         TopRightPanel.SetValue(Grid.RowSpanProperty, 2);
         TopRightPanel.SetValue(Grid.ColumnSpanProperty, 1);
         
@@ -482,6 +505,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Show all panels again
         MenuBar.IsVisible = true;
         LeftSidebar.IsVisible = true;
+        PageSelectorBar.IsVisible = true;
         TopToolbar.IsVisible = true;
         ControlsPanel.IsVisible = true;
         VerticalSplitter.IsVisible = true;
@@ -778,13 +802,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
     
-    /// <summary>
-    /// Unregisters a callback from the timer
-    /// </summary>
-    private void UnregisterTimerCallback(Action callback)
-    {
-        _timerCallbacks.Remove(callback);
-    }
 
     
     // ========================================================================

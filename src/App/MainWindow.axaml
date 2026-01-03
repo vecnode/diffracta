@@ -43,13 +43,22 @@
     </Grid.RowDefinitions>
     
     <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="200"/>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="2.5*"/>
         <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
     
+    <!-- Left Sidebar -->
+    <Border x:Name="LeftSidebar" Grid.Row="2" Grid.RowSpan="2" Grid.Column="0" 
+            Background="#1e1e1e"
+            BorderBrush="#555555"
+            BorderThickness="1,0,1,1">
+        <!-- Content will be added here -->
+    </Border>
+    
     <!-- Menu Bar -->
-    <Menu x:Name="MenuBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2d2d2d" Foreground="White" FontSize="12">
+    <Menu x:Name="MenuBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Background="#2d2d2d" Foreground="White" FontSize="12">
         <MenuItem Header="_File">
             <MenuItem Header="_New" />
             <MenuItem Header="E_xit" />
@@ -66,7 +75,7 @@
     </Menu>
     
     <!-- Top toolbar -->
-    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
+    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" 
             Background="#1e1e1e"
             BorderBrush="#555555"
             BorderThickness="1,1,1,1"
@@ -79,22 +88,24 @@
     
     
     
-    <!-- Simple Sidebar -->
-    <Border x:Name="LeftSidebar" Grid.Row="2" Grid.RowSpan="2" Grid.Column="0" 
+    <!-- Page Selector Bar -->
+    <Border x:Name="PageSelectorBar" Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" 
             Width="52" 
             Background="#1e1e1e"
             BorderBrush="#555555"
-            BorderThickness="1,0,1,1">
-        <StackPanel Orientation="Vertical" Spacing="8" Margin="8,6,6,6">
+            BorderThickness="0,0,1,1">
+        <StackPanel Orientation="Vertical" Spacing="0" Margin="0">
             <!-- Button 1: Controls -->
-            <Button x:Name="Page1Button" Width="34" Height="34" 
+            <Button x:Name="Page1Button" Width="51" Height="27.2" 
                     Background="Transparent" 
-                    BorderThickness="0"
-                    CornerRadius="4">
-                <Border Width="24" Height="24" 
-                        Background="#d3d3d3" 
-                        CornerRadius="2" 
-                        Opacity="0.5"/>
+                    BorderThickness="1"
+                    BorderBrush="#555555"
+                    CornerRadius="0">
+                <TextBlock Text="1" 
+                           Foreground="White" 
+                           FontSize="10"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 <Button.Styles>
                     <Style Selector="Button:pointerover">
                         <Setter Property="Background" Value="#2d2d2d"/>
@@ -103,14 +114,16 @@
             </Button>
             
             <!-- Button 2: Tools -->
-            <Button x:Name="Page2Button" Width="34" Height="34" 
+            <Button x:Name="Page2Button" Width="51" Height="27.2" 
                     Background="Transparent" 
-                    BorderThickness="0"
-                    CornerRadius="4">
-                <Border Width="24" Height="24" 
-                        Background="#d3d3d3" 
-                        CornerRadius="2" 
-                        Opacity="0.5"/>
+                    BorderThickness="1"
+                    BorderBrush="#555555"
+                    CornerRadius="0">
+                <TextBlock Text="2" 
+                           Foreground="White" 
+                           FontSize="10"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 <Button.Styles>
                     <Style Selector="Button:pointerover">
                         <Setter Property="Background" Value="#2d2d2d"/>
@@ -119,14 +132,16 @@
             </Button>
             
             <!-- Button 3: Settings -->
-            <Button x:Name="Page3Button" Width="34" Height="34" 
+            <Button x:Name="Page3Button" Width="51" Height="27.2" 
                     Background="Transparent" 
-                    BorderThickness="0"
-                    CornerRadius="4">
-                <Border Width="24" Height="24" 
-                        Background="#d3d3d3" 
-                        CornerRadius="2" 
-                        Opacity="0.5"/>
+                    BorderThickness="1"
+                    BorderBrush="#555555"
+                    CornerRadius="0">
+                <TextBlock Text="3" 
+                           Foreground="White" 
+                           FontSize="10"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 <Button.Styles>
                     <Style Selector="Button:pointerover">
                         <Setter Property="Background" Value="#2d2d2d"/>
@@ -135,14 +150,16 @@
             </Button>
 
             <!-- Button 4: Help -->
-            <Button x:Name="Page4Button" Width="34" Height="34" 
+            <Button x:Name="Page4Button" Width="51" Height="27.2" 
                     Background="Transparent" 
-                    BorderThickness="0"
-                    CornerRadius="4">
-                <Border Width="24" Height="24" 
-                        Background="#d3d3d3" 
-                        CornerRadius="2" 
-                        Opacity="0.5"/>
+                    BorderThickness="1"
+                    BorderBrush="#555555"
+                    CornerRadius="0">
+                <TextBlock Text="4" 
+                           Foreground="White" 
+                           FontSize="10"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 <Button.Styles>
                     <Style Selector="Button:pointerover">
                         <Setter Property="Background" Value="#2d2d2d"/>
@@ -155,19 +172,19 @@
     
     
     <!-- Left Panel (Page-based Navigation) - Full Height -->
-    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" x:Name="ControlsPanel" Background="#2d2d2d">
+    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" x:Name="ControlsPanel" Background="#2d2d2d">
         <ContentControl x:Name="PageContentControl">
             <!-- Page content will be swapped dynamically -->
         </ContentControl>
     </Grid>
     
     <!-- Vertical splitter between left and right columns -->
-    <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Width="1" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
+    <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" Width="1" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
     
 
     
     <!-- Right Side Panel: Shader Surface and Tabbed Panel -->
-    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" x:Name="TopRightPanel" Background="#2d2d2d" MinWidth="200">
+    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="3" x:Name="TopRightPanel" Background="#2d2d2d" MinWidth="200">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="3"/>
@@ -303,7 +320,7 @@
     <!-- Bottom Log Popup Panel -->
     <Border x:Name="LogPopupPanel" 
             Grid.RowSpan="4" 
-            Grid.ColumnSpan="3"
+            Grid.ColumnSpan="4"
             Background="#2d2d2d" 
             BorderBrush="#555555"
             BorderThickness="0,2,0,0"

@@ -7,6 +7,8 @@ namespace Diffracta;
 
 public partial class Utils_DirectoryBox : UserControl
 {
+    private MainWindow? _parentWindow;
+    
     public Utils_DirectoryBox()
     {
         InitializeComponent();
@@ -60,6 +62,30 @@ public partial class Utils_DirectoryBox : UserControl
                     };
                 }
             });
+        }
+    }
+    
+    /// <summary>
+    /// Sets the parent MainWindow reference and wires up the AddToWatched button.
+    /// </summary>
+    public void SetParentWindow(MainWindow parent)
+    {
+        _parentWindow = parent;
+        
+        // Wire up the AddToWatched button - use FindControl as fallback if auto-generated field isn't available yet
+        var addButton = this.FindControl<Button>("AddToWatchedButton");
+        var pathTextBox = this.FindControl<TextBox>("DirectoryPathTextBox");
+        
+        if (addButton != null && pathTextBox != null)
+        {
+            addButton.Click += (_, __) =>
+            {
+                var currentPath = pathTextBox.Text?.Trim() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(currentPath) && System.IO.Directory.Exists(currentPath))
+                {
+                    _parentWindow?.AddMediaDirectory(currentPath);
+                }
+            };
         }
     }
 }

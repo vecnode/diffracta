@@ -46,7 +46,7 @@ try {
     
     # Run the application
     Write-Host "Launching application" -ForegroundColor Yellow
-    dotnet run --project src/App/Diffracta.csproj
+    dotnet watch run --project src/App/Diffracta.csproj
 }
 catch {
     Write-Host "Error running application: $($_.Exception.Message)" -ForegroundColor Red
