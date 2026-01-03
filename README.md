@@ -77,5 +77,14 @@ docker build -f Dockerfile -t diffracta:latest ..
 docker run --rm --network host -e DISPLAY='<YOUR_IP>:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 ```
 
-**Note**: Running GUI applications in Docker on Windows requires an X server. The application will start its REST API server, but the GUI window will only appear if X11 forwarding is properly configured.
+Running GUI applications in Docker on Windows requires an X server. The application will start its REST API server, but the GUI window will only appear if X11 forwarding is properly configured.
 
+### REST API
+
+- `GET /` - Get API information
+- `GET /api/shader/list` - List all available shader files
+- `GET /api/nodes` - Get all processing nodes state
+- `POST /api/nodes/{slot}/active` - Set node active state (slot: 0-5)
+- `POST /api/nodes/{slot}/value` - Set node value (slot: 0-5)
+- `GET /api/state` - Get application state
+- `POST /api/performance` - Set performance mode
