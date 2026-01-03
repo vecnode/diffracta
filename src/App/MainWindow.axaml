@@ -45,8 +45,8 @@
     <Grid.ColumnDefinitions>
         <ColumnDefinition Width="200"/>
         <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="2.5*"/>
         <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="300"/>
     </Grid.ColumnDefinitions>
     
     <!-- Left Sidebar -->
@@ -178,20 +178,20 @@
         </ContentControl>
     </Grid>
     
-    <!-- Vertical splitter between left and right columns -->
-    <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" Width="1" Background="#555555" HorizontalAlignment="Right" x:Name="VerticalSplitter"/>
-    
-
     
     <!-- Right Side Panel: Shader Surface and Tabbed Panel -->
-    <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="3" x:Name="TopRightPanel" Background="#2d2d2d" MinWidth="200">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="3"/>
-            <RowDefinition Height="3*"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Top Right: Shader Surface -->
+    <Border Grid.Row="2" Grid.RowSpan="2" Grid.Column="3" 
+            BorderBrush="#555555" 
+            BorderThickness="1,0,0,0"
+            Background="#2d2d2d">
+        <Grid x:Name="TopRightPanel" Background="#2d2d2d" MinWidth="200">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="3"/>
+                <RowDefinition Height="3*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Top Right: Shader Surface -->
         <Border Grid.Row="0"
                 BorderBrush="Pink" 
                 BorderThickness="1" 
@@ -315,7 +315,8 @@
 
         </TabControl>
         </Grid>
-    </Grid>
+        </Grid>
+    </Border>
     
     <!-- Bottom Log Popup Panel -->
     <Border x:Name="LogPopupPanel" 

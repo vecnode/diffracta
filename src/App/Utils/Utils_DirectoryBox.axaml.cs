@@ -75,15 +75,39 @@ public partial class Utils_DirectoryBox : UserControl
         // Wire up the AddToWatched button - use FindControl as fallback if auto-generated field isn't available yet
         var addButton = this.FindControl<Button>("AddToWatchedButton");
         var pathTextBox = this.FindControl<TextBox>("DirectoryPathTextBox");
+        var directoryListBox = this.FindControl<ListBox>("DirectoryListBox");
         
         if (addButton != null && pathTextBox != null)
         {
             addButton.Click += (_, __) =>
             {
-                var currentPath = pathTextBox.Text?.Trim() ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(currentPath) && System.IO.Directory.Exists(currentPath))
+                string? pathToAdd = null;
+                
+                // First, try to get the selected directory from the list
+                if (directoryListBox != null && directoryListBox.SelectedItem is string selectedItem)
                 {
-                    _parentWindow?.AddMediaDirectory(currentPath);
+                    if (selectedItem.StartsWith("[DIR]"))
+                    {
+                        // Extract directory name and build full path
+                        var dirName = selectedItem.Substring(5).Trim();
+                        var currentPath = pathTextBox.Text?.Trim() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(currentPath) && !string.IsNullOrWhiteSpace(dirName))
+                        {
+                            pathToAdd = System.IO.Path.Combine(currentPath, dirName);
+                        }
+                    }
+                }
+                
+                // If no selection or selection failed, use current path from TextBox
+                if (string.IsNullOrWhiteSpace(pathToAdd))
+                {
+                    pathToAdd = pathTextBox.Text?.Trim() ?? string.Empty;
+                }
+                
+                // Add the directory if valid
+                if (!string.IsNullOrWhiteSpace(pathToAdd) && System.IO.Directory.Exists(pathToAdd))
+                {
+                    _parentWindow?.AddMediaDirectory(pathToAdd);
                 }
             };
         }

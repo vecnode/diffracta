@@ -10,24 +10,28 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="800"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*" MinWidth="860"/>
+            <ColumnDefinition Width="*" MinWidth="270"/>
         </Grid.ColumnDefinitions>
+        
+        <!-- DirectoryBox - Left side -->
         <Border Grid.Row="0" Grid.Column="0" 
-                HorizontalAlignment="Stretch" 
+                HorizontalAlignment="Left" 
                 VerticalAlignment="Stretch"
-                Margin="8"
+                Margin="8,8,2,8"
+                Width="860"
                 Background="Transparent">
             <local:Utils_DirectoryBox x:Name="DirectoryBox" 
                                        HorizontalAlignment="Stretch" 
                                        VerticalAlignment="Stretch"/>
         </Border>
         
-        <!-- Media Directories Visualizer -->
-        <Border Grid.Row="0" Grid.Column="1"
-                HorizontalAlignment="Stretch"
+        <!-- Media Directories Visualizer - Right side -->
+        <Border Grid.Row="0" Grid.Column="0"
+                HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
-                Margin="8"
+                Margin="450,8,8,8"
+                Width="270"
                 Background="#2d2d2d"
                 BorderBrush="#555555"
                 BorderThickness="1"
@@ -37,18 +41,36 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Grid.Row="0"
-                           Text="Media Directories"
-                           Foreground="White"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           Margin="0,0,0,8"/>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="1"
+                               Text="Media Directories"
+                               Foreground="White"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+
+                    <Button x:Name="ConvertButton"
+                            Grid.Column="2"
+                            Content="Convert"
+                            Width="60"
+                            Height="30"
+                            Margin="4,0,4,0"/>
+                    
+                </Grid>
                 
                 <ListBox x:Name="MediaDirectoriesListBox"
                          Grid.Row="1"
-                         Background="#1e1e1e"
+                         Width="270"
+                         Background="Transparent"
                          Foreground="White"
                          BorderBrush="#555555"
                          BorderThickness="1"
@@ -60,16 +82,89 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Foreground" Value="White"/>
                             <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ Border">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="BorderBrush" Value="#3d3d3d"/>
                         </Style>
                         <Style Selector="ListBoxItem:pointerover">
                             <Setter Property="Background" Value="#3d3d3d"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected:pointerover">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="Foreground" Value="White"/>
                         </Style>
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding}"
-                                       TextWrapping="Wrap"
-                                       TextTrimming="CharacterEllipsis"/>
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                
+                <TextBlock Grid.Row="2"
+                           Text="Media Items"
+                           Foreground="White"
+                           FontSize="12"
+                           Margin="0,8,0,8"/>
+                
+                <ListBox x:Name="MediaItemsListBox"
+                         Grid.Row="3"
+                         Width="270"
+                         Background="Transparent"
+                         Foreground="White"
+                         BorderBrush="#555555"
+                         BorderThickness="1"
+                         CornerRadius="2">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Height" Value="24"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ Border">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="BorderBrush" Value="#3d3d3d"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:pointerover">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected:pointerover">
+                            <Setter Property="Background" Value="#3d3d3d"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       TextWrapping="NoWrap"
+                                       VerticalAlignment="Center"/>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

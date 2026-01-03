@@ -102,11 +102,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     public void AddMediaDirectory(string directoryPath)
     {
         if (!string.IsNullOrWhiteSpace(directoryPath) && 
-            System.IO.Directory.Exists(directoryPath) && 
-            !_mediaDirectories.Contains(directoryPath))
+            System.IO.Directory.Exists(directoryPath))
         {
+            if (_mediaDirectories.Contains(directoryPath))
+            {
+                LogMessage($"Directory already in list: {directoryPath}");
+                return;
+            }
+            
             _mediaDirectories.Add(directoryPath);
-            LogMessage($"Added media directory: {directoryPath}");
+            LogMessage($"Added media directory: {directoryPath} (Total: {_mediaDirectories.Count})");
+            
+            // Force UI update notification
+            OnPropertyChanged(nameof(MediaDirectories));
+        }
+        else
+        {
+            LogMessage($"Invalid directory path: {directoryPath ?? "null"}");
         }
     }
     
@@ -397,14 +409,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         PageSelectorBar.IsVisible = false;
         TopToolbar.IsVisible = false;
         ControlsPanel.IsVisible = false;
-        VerticalSplitter.IsVisible = false;
         HorizontalSplitter.IsVisible = false;
         
         // Make TopRightPanel span the entire viewport and hide the tabbed panel
-        TopRightPanel.SetValue(Grid.RowProperty, 0);
-        TopRightPanel.SetValue(Grid.ColumnProperty, 0);
-        TopRightPanel.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows
-        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 4); // Spans all 4 columns
+        // Get the parent Border and set Grid properties on it
+        var topRightBorder = TopRightPanel.Parent as Avalonia.Controls.Border;
+        if (topRightBorder != null)
+        {
+            topRightBorder.SetValue(Grid.RowProperty, 0);
+            topRightBorder.SetValue(Grid.ColumnProperty, 0);
+            topRightBorder.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows
+            topRightBorder.SetValue(Grid.ColumnSpanProperty, 4); // Spans all 4 columns
+        }
         
         // Hide the tabbed panel part (row 2) and splitter (row 1), show only shader surface (row 0)
         // We'll do this by making the shader surface row take all space
@@ -464,10 +480,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Cursor = Avalonia.Input.Cursor.Parse("Arrow");
         
         // Restore TopRightPanel to normal position
-        TopRightPanel.SetValue(Grid.RowProperty, 2);
-        TopRightPanel.SetValue(Grid.ColumnProperty, 3);
-        TopRightPanel.SetValue(Grid.RowSpanProperty, 2);
-        TopRightPanel.SetValue(Grid.ColumnSpanProperty, 1);
+        // Get the parent Border and set Grid properties on it
+        var topRightBorder = TopRightPanel.Parent as Avalonia.Controls.Border;
+        if (topRightBorder != null)
+        {
+            topRightBorder.SetValue(Grid.RowProperty, 2);
+            topRightBorder.SetValue(Grid.ColumnProperty, 3);
+            topRightBorder.SetValue(Grid.RowSpanProperty, 2);
+            topRightBorder.SetValue(Grid.ColumnSpanProperty, 1);
+        }
         
         // Restore the grid row definitions
         var topRightGrid = TopRightPanel as Grid;
@@ -508,7 +529,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         PageSelectorBar.IsVisible = true;
         TopToolbar.IsVisible = true;
         ControlsPanel.IsVisible = true;
-        VerticalSplitter.IsVisible = true;
         HorizontalSplitter.IsVisible = true;
         
         LogMessage("Exited performance mode");
