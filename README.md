@@ -2,7 +2,7 @@
 
 [Under heavy development]
 
-This repository contains Diffracta, a desktop application for live video editing and cinema.  
+This repository contains Diffracta, a cross-platform desktop application for live video editing and cinema.  
 
 ### Build desktop app on Windows 11
 
