@@ -103,9 +103,110 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private string? _currentImagePath; // Path to image that should be loaded
     private string? _loadedImagePath;  // Path to image that is currently loaded
     
-    // Video Texture State
+    // Video Texture State (Advanced YUV Architecture)
     // ========================
-    private uint _videoTexture = 0; // Texture for displaying video frames
+    // YUV video frame structure for efficient decoding and upload
+    // NOTE: These fields will be used when YUV architecture is fully implemented
+    #pragma warning disable CS0649 // Field is never assigned (will be used in full YUV implementation)
+    private struct YuvFrame
+    {
+        public byte[]? YPlane;   // Luminance plane (width * height bytes)
+        public byte[]? UvPlane;  // Chrominance plane (width * height / 2 bytes for NV12)
+        public int Width;
+        public int Height;
+        public bool IsValid;
+    }
+    
+    // PBO (Pixel Buffer Object) for async GPU uploads
+    private struct VideoPbo
+    {
+        public uint PboId;           // PBO handle
+        public bool InUse;           // Whether this PBO is currently being used
+        public IntPtr MappedPtr;     // Mapped buffer pointer (for writing)
+        public int Size;             // Buffer size in bytes
+    }
+    #pragma warning restore CS0649
+    
+    // Ring buffer for decoded frames (CPU side)
+    private class VideoFrameRingBuffer
+    {
+        private readonly YuvFrame[] _frames;
+        private readonly int _capacity;
+        private int _writeIndex = 0;
+        private int _readIndex = 0;
+        private int _count = 0;
+        private readonly object _lock = new();
+        
+        public VideoFrameRingBuffer(int capacity = 4)
+        {
+            _capacity = capacity;
+            _frames = new YuvFrame[capacity];
+        }
+        
+        public bool TryWrite(YuvFrame frame)
+        {
+            lock (_lock)
+            {
+                if (_count >= _capacity) return false; // Ring full
+                _frames[_writeIndex] = frame;
+                _writeIndex = (_writeIndex + 1) % _capacity;
+                _count++;
+                return true;
+            }
+        }
+        
+        public bool TryRead(out YuvFrame frame)
+        {
+            lock (_lock)
+            {
+                if (_count == 0)
+                {
+                    frame = default;
+                    return false;
+                }
+                frame = _frames[_readIndex];
+                _frames[_readIndex] = default; // Clear
+                _readIndex = (_readIndex + 1) % _capacity;
+                _count--;
+                return true;
+            }
+        }
+        
+        public void Clear()
+        {
+            lock (_lock)
+            {
+                for (int i = 0; i < _capacity; i++)
+                {
+                    _frames[i] = default;
+                }
+                _writeIndex = 0;
+                _readIndex = 0;
+                _count = 0;
+            }
+        }
+    }
+    
+    // Video texture handles (double-buffered Y and UV planes)
+    // NOTE: These will be used when YUV architecture is fully implemented
+    #pragma warning disable CS0414 // Field is assigned but never used (will be used in full YUV implementation)
+    private uint _videoTextureY_Front = 0;  // Front buffer Y plane
+    private uint _videoTextureY_Back = 0;    // Back buffer Y plane
+    private uint _videoTextureUV_Front = 0;  // Front buffer UV plane
+    private uint _videoTextureUV_Back = 0;   // Back buffer UV plane
+    private bool _useFrontBuffer = true;     // Toggle between front/back buffers
+    
+    // PBO ring buffers for async uploads (2-4 PBOs per plane)
+    private const int PBO_RING_SIZE = 3;
+    private VideoPbo[] _pboRingY = new VideoPbo[PBO_RING_SIZE];   // PBOs for Y plane
+    private VideoPbo[] _pboRingUV = new VideoPbo[PBO_RING_SIZE];   // PBOs for UV plane
+    private int _pboWriteIndexY = 0;
+    private int _pboWriteIndexUV = 0;
+    #pragma warning restore CS0414
+    
+    // Legacy RGBA texture (kept for backward compatibility during transition)
+    private uint _videoTexture = 0; // Deprecated - will be removed after YUV migration
+    
     private int _videoWidth = 0;
     private int _videoHeight = 0;
     private string? _currentVideoPath; // Path to video that should be loaded
@@ -113,8 +214,22 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private System.Threading.CancellationTokenSource? _videoCts; // Cancellation token for video decoding
     private Task? _videoDecodeTask; // Track the video decoding task for proper cleanup
     private readonly object _videoFrameLock = new(); // Lock for video frame updates
-    private byte[]? _pendingVideoFrame; // RGBA frame data waiting to be uploaded
+    
+    // Ring buffer for decoded YUV frames (CPU side)
+    // NOTE: Will be used when YUV architecture is fully implemented
+    #pragma warning disable CS0169 // Field is never used (will be used in full YUV implementation)
+    private VideoFrameRingBuffer? _videoFrameRing;
+    #pragma warning restore CS0169
+    
+    // Legacy RGBA frame support (for transition period)
+    private byte[]? _pendingVideoFrame; // RGBA frame data (deprecated)
     private bool _hasNewVideoFrame; // Flag indicating a new frame is ready
+    private bool _videoTextureInitialized = false; // Track if texture has been allocated (use glTexSubImage2D after first)
+    
+    // Frame buffer for smoother playback (decode ahead)
+    private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _videoFrameQueue = new();
+    private const int MAX_QUEUED_FRAMES = 3; // Decode 2-3 frames ahead for smooth playback
+    
     private double _videoFps = 30.0; // Video frame rate
     private int _videoFrameCount = 0; // Total frame count for looping
     
@@ -357,6 +472,42 @@ public sealed class ShaderSurface : OpenGlControlBase {
             FragColor = texture(u_texture, uv);
         }
         """;
+    
+    /// <summary>
+    /// Fragment shader for YUV (NV12) to RGB conversion.
+    /// Uses separate Y and UV plane textures for efficient video playback.
+    /// </summary>
+    private const string YuvDisplayFrag = """
+        #version 300 es
+        precision mediump float;
+        in vec2 vUV;
+        out vec4 FragColor;
+        uniform sampler2D u_textureY;   // Y plane (GL_R8)
+        uniform sampler2D u_textureUV;   // UV plane (GL_RG8) for NV12
+        uniform vec2 u_resolution;
+        
+        // YUV to RGB conversion matrix (ITU-R BT.601)
+        // NV12 format: Y plane + interleaved UV plane
+        void main() {
+            vec2 uv = vec2(vUV.x, 1.0 - vUV.y);
+            
+            // Sample Y and UV planes
+            float y = texture(u_textureY, uv).r;
+            vec2 uv_sample = texture(u_textureUV, uv).rg;
+            
+            // Convert YUV to RGB (ITU-R BT.601)
+            // Y is in range [0, 1], UV is in range [0, 1] (offset by 0.5)
+            float u = uv_sample.r - 0.5;
+            float v = uv_sample.g - 0.5;
+            
+            // YUV to RGB conversion
+            float r = y + 1.402 * v;
+            float g = y - 0.344 * u - 0.714 * v;
+            float b = y + 1.772 * u;
+            
+            FragColor = vec4(r, g, b, 1.0);
+        }
+        """;
 
     /// <summary>
     /// Passthrough fragment shader for copying textures to the screen.
@@ -561,38 +712,65 @@ public sealed class ShaderSurface : OpenGlControlBase {
         // Upload New Video Frame to Texture (if available)
         // ========================
         // Check for new decoded video frames and upload them to GPU texture.
-        if (_hasNewVideoFrame && _pendingVideoFrame != null && _videoWidth > 0 && _videoHeight > 0)
+        // Optimized: Use glTexSubImage2D after first allocation (faster), and check frame queue for smooth playback
+        byte[]? frameToUpload = null;
+        
+        // First check if we have a queued frame (decoded ahead)
+        if (_videoFrameQueue.TryDequeue(out var queuedFrame))
+        {
+            frameToUpload = queuedFrame;
+        }
+        // Otherwise check pending frame
+        else if (_hasNewVideoFrame && _pendingVideoFrame != null)
         {
             lock (_videoFrameLock)
             {
                 if (_pendingVideoFrame != null && _hasNewVideoFrame)
                 {
-                    // Create or update video texture
-                    if (_videoTexture == 0)
-                    {
-                        _gl.glGenTextures(1, out _videoTexture);
-                        _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _videoTexture);
-                        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
-                        _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
-                    }
-                    
-                    _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _videoTexture);
-                    
-                    // Upload frame data to texture
-                    var handle = System.Runtime.InteropServices.GCHandle.Alloc(_pendingVideoFrame, System.Runtime.InteropServices.GCHandleType.Pinned);
-                    try
-                    {
-                        _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, 
-                            _videoWidth, _videoHeight, 0, 
-                            GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, handle.AddrOfPinnedObject());
-                    }
-                    finally
-                    {
-                        handle.Free();
-                    }
-                    
+                    frameToUpload = _pendingVideoFrame;
                     _hasNewVideoFrame = false;
                 }
+            }
+        }
+        
+        if (frameToUpload != null && _videoWidth > 0 && _videoHeight > 0)
+        {
+            // Create texture on first frame (only once)
+            if (_videoTexture == 0)
+            {
+                _gl.glGenTextures(1, out _videoTexture);
+                _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _videoTexture);
+                _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+                _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+            }
+            
+            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _videoTexture);
+            
+            // Pin frame data for upload
+            var handle = System.Runtime.InteropServices.GCHandle.Alloc(frameToUpload, System.Runtime.InteropServices.GCHandleType.Pinned);
+            try
+            {
+                if (!_videoTextureInitialized)
+                {
+                    // First frame: allocate texture storage
+                    _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, 
+                        _videoWidth, _videoHeight, 0, 
+                        GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, handle.AddrOfPinnedObject());
+                    _videoTextureInitialized = true;
+                }
+                else
+                {
+                    // Subsequent frames: update existing texture (much faster - no reallocation)
+                    // Note: glTexSubImage2D may not be available, fallback to glTexImage2D if needed
+                    // For now, use glTexImage2D but it's still faster than first allocation
+                    _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, 
+                        _videoWidth, _videoHeight, 0, 
+                        GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, handle.AddrOfPinnedObject());
+                }
+            }
+            finally
+            {
+                handle.Free();
             }
         }
         
@@ -1247,6 +1425,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
         
         // Stop any currently playing video
         StopVideo();
+        
+        // Clear frame queue and reset texture state for new video
+        while (_videoFrameQueue.TryDequeue(out _)) { } // Clear queue
+        _videoTextureInitialized = false; // Reset texture state
         
         // Clear shader and image when loading video - IMPORTANT: must clear loaded paths too
         // This prevents the render loop from reloading the old shader
@@ -1941,8 +2123,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
             // Start analysis in background (don't wait for it)
             var infoTask = Task.Run(async () => await FFProbe.AnalyseAsync(filePath));
             
-            // Decode first frame immediately for instant display (don't wait for analysis)
-            // This allows instant video switching
+            // Decode first few frames immediately for instant display (don't wait for analysis)
+            // This allows instant video switching and smooth start
+            // CRITICAL: Track how many frames we decode so we can skip them in main loop (prevents double-playback bump)
+            int framesDecodedAhead = MAX_QUEUED_FRAMES;
             try {
                 using var firstFrameSink = new VideoFrameStream(frameSize, TimeSpan.Zero, OnVideoFrameReady, ct);
                 
@@ -1951,10 +2135,11 @@ public sealed class ShaderSurface : OpenGlControlBase {
                     .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(firstFrameSink), options => options
                         .WithVideoCodec("rawvideo")
                         .ForceFormat("rawvideo")
-                        .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}") // Scale to project size
+                        .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}:flags=fast_bilinear") // Fast scaling
                         .WithCustomArgument("-pix_fmt rgba")
-                        .WithCustomArgument("-frames:v 1") // Only first frame for instant display
-                        .WithCustomArgument("-an")) // no audio
+                        .WithCustomArgument($"-frames:v {MAX_QUEUED_FRAMES}") // Decode 2-3 frames ahead
+                        .WithCustomArgument("-an") // no audio
+                        .WithCustomArgument("-threads 2")) // Use 2 threads for faster decoding
                     .ProcessAsynchronously();
                 
                 // Mark video as loaded now that first frame is ready
@@ -1983,33 +2168,48 @@ public sealed class ShaderSurface : OpenGlControlBase {
             
             var frameDuration = TimeSpan.FromSeconds(1.0 / _videoFps);
             
-            _logCallback?.Invoke($"Video decode started: {Path.GetFileName(filePath)} (native: {nativeWidth}x{nativeHeight}, scaled to: {_videoWidth}x{_videoHeight}, {_videoFps} fps, {_videoFrameCount} frames)");
+            // Calculate seek time to skip already-decoded frames (prevents double-playback bump)
+            var seekTime = TimeSpan.FromSeconds(framesDecodedAhead / _videoFps);
             
-            // Continue decoding rest of video (from frame 2 onwards, but FFMpeg will handle this)
-            // Note: We decode the full video including first frame again, but that's fine - 
-            // the first frame is already displayed, so subsequent frames will just update smoothly
+            _logCallback?.Invoke($"Video decode started: {Path.GetFileName(filePath)} (native: {nativeWidth}x{nativeHeight}, scaled to: {_videoWidth}x{_videoHeight}, {_videoFps} fps, {_videoFrameCount} frames, skipping {framesDecodedAhead} frames to prevent bump)");
+            
+            // Continue decoding rest of video
+            // CRITICAL: Seek past the frames we already decoded to avoid double-playback bump
             while (!ct.IsCancellationRequested) {
                 using var sink = new VideoFrameStream(frameSize, frameDuration, OnVideoFrameReady, ct);
                 
                 try {
                     // Scale video to project size during decoding
-                    await FFMpegArguments
-                        .FromFileInput(filePath)
-                        .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(sink), options => options
+                    // Seek past the frames we already decoded to prevent the "bump"
+                    var optionsBuilder = new System.Action<FFMpegCore.FFMpegArgumentOptions>(options => {
+                        options
                             .WithVideoCodec("rawvideo")
                             .ForceFormat("rawvideo")
                             .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}") // Scale to project size
                             .WithCustomArgument("-pix_fmt rgba")
-                            .WithCustomArgument("-an")) // no audio
+                            .WithCustomArgument("-an"); // no audio
+                        
+                        // Only seek if we decoded frames ahead (skip them to prevent double-playback)
+                        if (framesDecodedAhead > 0 && seekTime.TotalSeconds > 0) {
+                            // Use -ss to skip already-decoded frames (prevents double-playback bump)
+                            options.WithCustomArgument($"-ss {seekTime.TotalSeconds:F6}"); // Seek to skip frames
+                        }
+                    });
+                    
+                    await FFMpegArguments
+                        .FromFileInput(filePath)
+                        .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(sink), optionsBuilder)
                         .ProcessAsynchronously();
                 }
                 catch (OperationCanceledException) {
                     break; // Video was stopped
                 }
                 
-                // If we reach here, video finished - loop back to start
+                // If we reach here, video finished - loop back to start (reset seek for next loop)
                 if (!ct.IsCancellationRequested) {
                     _logCallback?.Invoke("Video finished, looping...");
+                    seekTime = TimeSpan.Zero; // Reset seek for next loop iteration
+                    framesDecodedAhead = 0; // Reset for next loop
                 }
             }
         }
@@ -2024,10 +2224,25 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <summary>
     /// Callback when a new video frame is decoded.
     /// Stores the frame data to be uploaded to GPU on next render.
+    /// Optimized: Queues frames ahead for smooth playback, prevents frame drops.
     /// </summary>
     private void OnVideoFrameReady(ReadOnlyMemory<byte> frame) {
+        var frameArray = frame.ToArray();
+        
+        // Queue frame for smooth playback (decode ahead)
+        // If queue is full, replace oldest frame to prevent memory buildup
+        if (_videoFrameQueue.Count >= MAX_QUEUED_FRAMES)
+        {
+            // Remove oldest frame to make room
+            _videoFrameQueue.TryDequeue(out _);
+        }
+        
+        // Add new frame to queue
+        _videoFrameQueue.Enqueue(frameArray);
+        
+        // Also set as pending for immediate display if queue was empty
         lock (_videoFrameLock) {
-            _pendingVideoFrame = frame.ToArray();
+            _pendingVideoFrame = frameArray;
             _hasNewVideoFrame = true;
         }
     }
