@@ -82,6 +82,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // Pad-to-media mapping: pad number (1-32) -> media path (shader or video)
     private readonly Dictionary<int, string> _padMediaMapping = new();
     
+    // Project size for consistent video/output resolution
+    private int _projectWidth = 1920;
+    private int _projectHeight = 1080;
+    
     // ========================================================================
     // PUBLIC EVENTS
     // ========================================================================
@@ -157,6 +161,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 if (Surface != null)
                 {
                     Surface.SetLogCallback(LogMessage);
+                    // Initialize project size
+                    Surface.SetProjectSize(_projectWidth, _projectHeight);
                 }
                 else
                 {
@@ -672,15 +678,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             {
                 // It's a video - check if it exists in library
                 var video = _videoLibrary.GetVideo(mediaPath);
+                string videoPath = mediaPath;
+                
                 if (video != null)
                 {
-                    LogMessage($"Video assigned to pad {padNumber:D2}: {video.FileName} ({video.Width}x{video.Height}, {video.FrameCount} frames)");
-                    // TODO: Implement video playback when video surface is available
+                    videoPath = video.FilePath;
+                    LogMessage($"Video found in library: {video.FileName} ({video.Width}x{video.Height}, {video.FrameCount} frames)");
                 }
                 else
                 {
-                    LogMessage($"Video not found: {mediaPath}");
+                    // Video not in library, but try to load it directly if file exists
+                    if (File.Exists(mediaPath))
+                    {
+                        LogMessage($"Video not in library, loading directly: {Path.GetFileName(mediaPath)}");
+                    }
+                    else
+                    {
+                        LogMessage($"Video file not found: {mediaPath}");
+                        return;
+                    }
                 }
+                
+                // Load video into shader surface
+                if (Surface != null)
+                {
+                    Surface.LoadVideo(videoPath, out var message);
+                    LogMessage($"Video assigned to pad {padNumber:D2}: {Path.GetFileName(videoPath)}");
+                    LogMessage(message);
+                }
+                
+                // Sync Child Window 2 if open (videos can be displayed there too if needed)
+                // Note: ChildWindow2 may need video support added separately if desired
+                
+                UpdateTabContent();
             }
         }
     }
@@ -752,6 +782,68 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     public MainTempo Tempo => _globalTempoNumber;
     public string TempoButtonText => _isTempoRunning ? "Stop Clock" : "Start Clock";
     public string TempoButtonBackground => _isTempoRunning ? "#ff8c00" : "#d3d3d3";
+    
+    /// <summary>
+    /// Project width for consistent output resolution (globally changeable)
+    /// </summary>
+    public string ProjectWidth
+    {
+        get => _projectWidth.ToString();
+        set
+        {
+            // Allow any positive integer value
+            if (int.TryParse(value, out int width) && width > 0)
+            {
+                if (_projectWidth != width)
+                {
+                    _projectWidth = width;
+                    OnPropertyChanged(nameof(ProjectWidth));
+                    // Update shader surface with new project size
+                    if (Surface != null)
+                    {
+                        Surface.SetProjectSize(_projectWidth, _projectHeight);
+                        LogMessage($"Project width changed to: {_projectWidth}");
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Project height for consistent output resolution (globally changeable)
+    /// </summary>
+    public string ProjectHeight
+    {
+        get => _projectHeight.ToString();
+        set
+        {
+            // Allow any positive integer value
+            if (int.TryParse(value, out int height) && height > 0)
+            {
+                if (_projectHeight != height)
+                {
+                    _projectHeight = height;
+                    OnPropertyChanged(nameof(ProjectHeight));
+                    // Update shader surface with new project size
+                    if (Surface != null)
+                    {
+                        Surface.SetProjectSize(_projectWidth, _projectHeight);
+                        LogMessage($"Project height changed to: {_projectHeight}");
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current project width as integer
+    /// </summary>
+    public int ProjectWidthInt => _projectWidth;
+    
+    /// <summary>
+    /// Gets the current project height as integer
+    /// </summary>
+    public int ProjectHeightInt => _projectHeight;
     
     // ========================================================================
     // UI UPDATES - Tab content and shader nodes visualization
@@ -930,6 +1022,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
         var tempoButton = page.FindControl<Button>("TempoButton");
         var resetButton = page.FindControl<Button>("ResetButton");
+        var projectWidthInput = page.FindControl<TextBox>("ProjectWidthInput");
+        var projectHeightInput = page.FindControl<TextBox>("ProjectHeightInput");
+        
+        // Wire up project size inputs - changes are handled via data binding
+        // The TextBox controls are bound to ProjectWidth/ProjectHeight properties
+        // which automatically update the shader surface when changed
         
         // Wire up Apply button to assign media to selected pad
         if (applyButton != null && mediaPicker != null && slotPicker != null)
@@ -979,6 +1077,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                         // Store mapping
                         _padMediaMapping[padNumber] = mediaPath;
                         LogMessage($"Assigned {selectedMedia} to pad {padNumber:D2}");
+                        
+                        // Preload video if it's a video (not a shader)
+                        if (!isShader && Surface != null)
+                        {
+                            Surface.PreloadVideo(mediaPath);
+                        }
                     }
                 }
             };

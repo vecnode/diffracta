@@ -29,6 +29,22 @@
                         Click="OnSplitVerticalClick"/>
                 
                 <local:Utils_GlobalTempoDisplay x:Name="TempoDisplay"/>
+                
+                <!-- Project Size Controls -->
+                <Border Width="1" Background="#555555" Margin="8,0" VerticalAlignment="Stretch"/>
+                <TextBlock Text="Project Size:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
+                <TextBlock Text="W:" Foreground="White" VerticalAlignment="Center" FontSize="12" Margin="4,0,0,0"/>
+                <TextBox x:Name="ProjectWidthInput" 
+                         Text="{Binding ProjectWidth, Mode=TwoWay}" 
+                         Width="70" 
+                         VerticalAlignment="Center"
+                         FontSize="11"/>
+                <TextBlock Text="H:" Foreground="White" VerticalAlignment="Center" FontSize="12" Margin="4,0,0,0"/>
+                <TextBox x:Name="ProjectHeightInput" 
+                         Text="{Binding ProjectHeight, Mode=TwoWay}" 
+                         Width="70" 
+                         VerticalAlignment="Center"
+                         FontSize="11"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">
