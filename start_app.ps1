@@ -36,6 +36,21 @@ if (-not (Test-Path "src/App/Diffracta.csproj")) {
     exit 1
 }
 
+# Clean up any existing Diffracta processes before starting
+Write-Host "Cleaning up any existing Diffracta processes" -ForegroundColor Yellow
+$existingProcesses = Get-Process -Name "Diffracta" -ErrorAction SilentlyContinue
+if ($existingProcesses) {
+    $existingProcesses | ForEach-Object {
+        Write-Host "Stopping existing Diffracta process (PID: $($_.Id))" -ForegroundColor Yellow
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+    # Wait for processes to fully terminate and release file locks
+    # Windows needs a moment to release .exe and .pdb file handles
+    Start-Sleep -Milliseconds 1500
+    Write-Host "Cleanup complete" -ForegroundColor Green
+}
+
+
 try {
     # Restore packages to local cache first
     Write-Host "Restoring packages to local cache" -ForegroundColor Yellow

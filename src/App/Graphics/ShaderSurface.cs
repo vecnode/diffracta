@@ -1,12 +1,17 @@
 using Avalonia;
 using Avalonia.OpenGL.Controls;
 using Avalonia.OpenGL;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Media;
+using FFMpegCore;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Diffracta.Graphics;
 
@@ -87,6 +92,14 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private string? _currentFragPath; // Path to shader file that should be loaded
     private string? _loadedFragPath;  // Path to shader file that is currently loaded
     private Action<string>? _logCallback; // Callback for logging messages
+    
+    // Image Texture State
+    // ========================
+    private uint _imageTexture = 0; // Texture for displaying images
+    private int _imageWidth = 0;
+    private int _imageHeight = 0;
+    private string? _currentImagePath; // Path to image that should be loaded
+    private string? _loadedImagePath;  // Path to image that is currently loaded
     
     // ========================
     // Framebuffer Size Tracking
@@ -253,6 +266,23 @@ public sealed class ShaderSurface : OpenGlControlBase {
             FragColor = vec4(uv.x, uv.y, t, 1.0);
         }
         """;
+    
+    /// <summary>
+    /// Fragment shader for displaying an image texture.
+    /// Samples from u_texture and displays it on screen.
+    /// </summary>
+    private const string ImageDisplayFrag = """
+        #version 300 es
+        precision mediump float;
+        in vec2 vUV;
+        out vec4 FragColor;
+        uniform sampler2D u_texture;
+        uniform vec2 u_resolution;
+        void main() {
+            vec2 uv = vec2(vUV.x, 1.0 - vUV.y);
+            FragColor = texture(u_texture, uv);
+        }
+        """;
 
     // ========================
     // DEAD CODE - Unused Shader
@@ -405,19 +435,137 @@ public sealed class ShaderSurface : OpenGlControlBase {
         if (_gl is null) return;
 
         // ========================
-        // Build Main Shader Program (Lazy Initialization)
+        // Check for Pending Image to Load (check this BEFORE fallback shader)
         // ========================
-        // Build shader program on first render if not already built.
-        // Uses fallback shader if no shader file is loaded.
-        if (_program == 0)
+        // Loads an image from avares resource and displays it.
+        if (!string.IsNullOrEmpty(_currentImagePath))
         {
-            _program = BuildProgram(VertexSrc, FallbackFrag, out var buildLog);
-            if (_program == 0)
+            // Only load if it's different from what's currently loaded
+            bool needsLoad = _loadedImagePath == null || 
+                           !string.Equals(_loadedImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase);
+            
+            if (needsLoad)
             {
-                _logCallback?.Invoke($"Failed to build initial shader program: {buildLog}");
-                return;
+                try
+                {
+                    // Load image from avares resource
+                    var uri = new Uri(_currentImagePath);
+                    using var stream = AssetLoader.Open(uri);
+                    if (stream != null)
+                    {
+                        // Get image dimensions first
+                        using var tempBitmap = new Bitmap(stream);
+                        var pixelSize = tempBitmap.PixelSize;
+                        stream.Position = 0; // Reset stream for FFMpeg
+                        
+                        // Use FFMpegCore to decode PNG to raw RGBA pixels (same approach as video frames)
+                        var pixelData = new byte[pixelSize.Width * pixelSize.Height * 4];
+                        
+                        // Decode image using FFMpeg to get raw RGBA pixel data
+                        var tempFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
+                        try
+                        {
+                            // Write stream to temp file for FFMpeg
+                            using (var fileStream = File.Create(tempFilePath))
+                            {
+                                stream.CopyTo(fileStream);
+                            }
+                            
+                            // Decode using FFMpeg (same as video decoding)
+                            var frameSize = pixelSize.Width * pixelSize.Height * 4;
+                            var decodedFlag = new bool[1] { false };
+                            
+                            // Use Task.Run to handle async FFMpeg call synchronously
+                            Task.Run(async () =>
+                            {
+                                await FFMpegArguments
+                                    .FromFileInput(tempFilePath)
+                                    .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(new SingleFrameStream(frameSize, (frame) =>
+                                    {
+                                        if (frame.Length >= frameSize)
+                                        {
+                                            frame.Span.CopyTo(pixelData);
+                                            decodedFlag[0] = true;
+                                        }
+                                    })), options => options
+                                        .WithVideoCodec("rawvideo")
+                                        .ForceFormat("rawvideo")
+                                        .WithCustomArgument("-pix_fmt rgba")
+                                        .WithCustomArgument("-frames:v 1")
+                                        .WithCustomArgument("-an"))
+                                    .ProcessAsynchronously();
+                            }).GetAwaiter().GetResult();
+                            
+                            if (!decodedFlag[0])
+                            {
+                                _logCallback?.Invoke($"Warning: Failed to decode image pixels, using fallback");
+                                // Fallback: fill with gray
+                                Array.Fill(pixelData, (byte)128);
+                            }
+                            else
+                            {
+                                _logCallback?.Invoke($"Image decoded: {pixelSize.Width}x{pixelSize.Height}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logCallback?.Invoke($"Error decoding image: {ex.Message}");
+                            // Fallback: fill with gray
+                            Array.Fill(pixelData, (byte)128);
+                        }
+                        finally
+                        {
+                            // Clean up temp file
+                            try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
+                        }
+                            
+                            // Create or update texture
+                            if (_imageTexture == 0)
+                            {
+                                _gl.glGenTextures(1, out _imageTexture);
+                            }
+                            
+                            _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _imageTexture);
+                            _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MIN_FILTER, (int)GLLoader.GL_LINEAR);
+                            _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
+                            
+                        // Upload texture data
+                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(pixelData, System.Runtime.InteropServices.GCHandleType.Pinned);
+                        try
+                        {
+                            _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, 
+                                pixelSize.Width, pixelSize.Height, 0, 
+                                GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, handle.AddrOfPinnedObject());
+                        }
+                        finally
+                        {
+                            handle.Free();
+                        }
+                        
+                        _imageWidth = pixelSize.Width;
+                        _imageHeight = pixelSize.Height;
+                        
+                        // Build image display shader
+                        var program = BuildProgram(VertexSrc, ImageDisplayFrag, out string buildLog);
+                        
+                        if (program != 0)
+                        {
+                            _program = program;
+                            _loadedImagePath = _currentImagePath;
+                            CacheUniforms();
+                            _logCallback?.Invoke($"Successfully loaded image: {Path.GetFileName(_currentImagePath)}");
+                        }
+                        else
+                        {
+                            _logCallback?.Invoke($"Failed to build image display shader: {buildLog}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logCallback?.Invoke($"Failed to load image: {ex.Message}");
+                }
             }
-            CacheUniforms();
         }
         
         // ========================
@@ -440,6 +588,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 {
                     _program = program;
                     _loadedFragPath = _currentFragPath;
+                    _loadedImagePath = null; // Clear image when loading shader
                     CacheUniforms();
                     _logCallback?.Invoke($"Successfully loaded shader: {Path.GetFileName(_currentFragPath)}");
                 }
@@ -448,6 +597,22 @@ public sealed class ShaderSurface : OpenGlControlBase {
                     _logCallback?.Invoke($"Failed to load shader: {pendingBuildLog}");
                 }
             }
+        }
+        
+        // ========================
+        // Build Main Shader Program (Lazy Initialization - Fallback Only)
+        // ========================
+        // Build fallback shader ONLY if no shader file or image has been loaded.
+        // This ensures images and shaders take priority over the fallback.
+        if (_program == 0 && string.IsNullOrEmpty(_loadedImagePath) && string.IsNullOrEmpty(_loadedFragPath))
+        {
+            _program = BuildProgram(VertexSrc, FallbackFrag, out var buildLog);
+            if (_program == 0)
+            {
+                _logCallback?.Invoke($"Failed to build initial shader program: {buildLog}");
+                return;
+            }
+            CacheUniforms();
         }
 
         try {
@@ -553,6 +718,18 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 _gl.glUseProgram(_program);
                 if (_uTime >= 0) _gl.glUniform1f(_uTime, (float)_clock.Elapsed.TotalSeconds);
                 if (_uRes  >= 0) _gl.glUniform2f(_uRes, w, h);
+                
+                // If using image display shader, bind the image texture
+                if (!string.IsNullOrEmpty(_loadedImagePath) && _imageTexture != 0)
+                {
+                    _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                    _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _imageTexture);
+                    var uTextureLoc = _gl.glGetUniformLocation(_program, "u_texture");
+                    if (uTextureLoc >= 0)
+                    {
+                        _gl.glUniform1i(uTextureLoc, 0);
+                    }
+                }
 
                 _gl.glBindVertexArray(_vao);
                 _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
@@ -730,6 +907,18 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 _gl.glUseProgram(_program);
                 if (_uTime >= 0) _gl.glUniform1f(_uTime, (float)_clock.Elapsed.TotalSeconds);
                 if (_uRes  >= 0) _gl.glUniform2f(_uRes, w, h);
+                
+                // If using image display shader, bind the image texture
+                if (!string.IsNullOrEmpty(_loadedImagePath) && _imageTexture != 0)
+                {
+                    _gl.glActiveTexture(GLLoader.GL_TEXTURE0);
+                    _gl.glBindTexture(GLLoader.GL_TEXTURE_2D, _imageTexture);
+                    var uTextureLoc = _gl.glGetUniformLocation(_program, "u_texture");
+                    if (uTextureLoc >= 0)
+                    {
+                        _gl.glUniform1i(uTextureLoc, 0);
+                    }
+                }
 
                 _gl.glBindVertexArray(_vao);
                 _gl.glDrawArrays(GLLoader.GL_TRIANGLES, 0, 3);
@@ -801,7 +990,19 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <param name="message">Output message indicating success or failure</param>
     public void LoadFragmentShaderFromFile(string path, out string message) {
         _currentFragPath = path;
+        _currentImagePath = null; // Clear image when loading shader
         message = "Shader path set successfully";
+    }
+    
+    /// <summary>
+    /// Loads an image from an avares resource and displays it as the initial shader.
+    /// </summary>
+    /// <param name="avaresPath">Avares path to the image (e.g., "avares://Diffracta/Media/default/smpte_color_bars.png")</param>
+    /// <param name="message">Output message indicating success or failure</param>
+    public void LoadImageFromAvares(string avaresPath, out string message) {
+        _currentImagePath = avaresPath;
+        _currentFragPath = null; // Clear shader when loading image
+        message = "Image path set successfully";
     }
 
     // ========================
@@ -1165,6 +1366,65 @@ public sealed class ShaderSurface : OpenGlControlBase {
             return 0;
         }
         return sh;
+    }
+    
+    // Helper class for single-frame image decoding
+    private sealed class SingleFrameStream : Stream
+    {
+        private readonly int _frameSize;
+        private readonly MemoryStream _buffer = new();
+        private readonly Action<ReadOnlyMemory<byte>> _onFrame;
+        private bool _frameReceived;
+
+        public SingleFrameStream(int frameSize, Action<ReadOnlyMemory<byte>> onFrame)
+        {
+            _frameSize = frameSize;
+            _onFrame = onFrame;
+        }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => _buffer.Length;
+        public override long Position { get => _buffer.Position; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            if (!_frameReceived)
+            {
+                _buffer.Write(buffer, offset, count);
+                if (_buffer.Length >= _frameSize)
+                {
+                    _buffer.Position = 0;
+                    var frameBytes = new byte[_frameSize];
+                    int read = _buffer.Read(frameBytes, 0, _frameSize);
+                    _onFrame(new ReadOnlyMemory<byte>(frameBytes, 0, read));
+                    _frameReceived = true;
+                }
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            if (!_frameReceived)
+            {
+                _buffer.Write(buffer);
+                if (_buffer.Length >= _frameSize)
+                {
+                    _buffer.Position = 0;
+                    var frameBytes = new byte[_frameSize];
+                    int read = _buffer.Read(frameBytes, 0, _frameSize);
+                    _onFrame(new ReadOnlyMemory<byte>(frameBytes, 0, read));
+                    _frameReceived = true;
+                }
+            }
+        }
+#endif
     }
 }
 

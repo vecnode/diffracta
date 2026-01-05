@@ -5,10 +5,9 @@
              x:Class="Diffracta.Page4">
     <ScrollViewer Margin="8">
         <StackPanel Spacing="12">
-            <TextBlock Text="Help &amp; Documentation" Foreground="White" FontSize="14"/>
+
             
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <Image Source="avares://Diffracta/Media/default/smpte_color_bars.png" Width="300" HorizontalAlignment="Left"/>
                 <StackPanel Spacing="8">
                     <gfx:VideoSurface x:Name="HelpVideoSurface" Width="300" Height="170"/>
                     <StackPanel Orientation="Horizontal" Spacing="8">

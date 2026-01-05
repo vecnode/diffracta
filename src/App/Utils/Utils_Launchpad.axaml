@@ -9,6 +9,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/> <!-- Top bar -->
                 <RowDefinition Height="*"/> <!-- Pad area -->
+                <RowDefinition Height="30"/> <!-- Spacer -->
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="160"/> <!-- Left bar -->

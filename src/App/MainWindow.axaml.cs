@@ -76,6 +76,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // Global media directories list (accessible from all pages)
     private readonly ObservableCollection<string> _mediaDirectories = new();
     
+    // Video library for managing video files and metadata
+    private readonly VideoLibrary _videoLibrary = new();
+    
+    // Pad-to-media mapping: pad number (1-32) -> media path (shader or video)
+    private readonly Dictionary<int, string> _padMediaMapping = new();
+    
     // ========================================================================
     // PUBLIC EVENTS
     // ========================================================================
@@ -95,6 +101,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// Gets the global list of media directory paths (accessible from all pages).
     /// </summary>
     public ObservableCollection<string> MediaDirectories => _mediaDirectories;
+    
+    /// <summary>
+    /// Gets the video library instance (accessible from all pages).
+    /// </summary>
+    public VideoLibrary VideoLibrary => _videoLibrary;
     
     /// <summary>
     /// Adds a directory path to the media directories list if it doesn't already exist.
@@ -186,21 +197,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 // Initialize with controls page
                 SwitchToPage(1);
                 
-                // Auto-load default shader after page is loaded
-                var defaultShader = "001_organic_noise_1.glsl";
-                var defaultShaderPath = System.IO.Path.Combine(_shaderDir, defaultShader);
-                if (File.Exists(defaultShaderPath) && Surface != null)
+                // Load initial frame (SMPTE color bars image)
+                var initialImagePath = "avares://Diffracta/Media/default/smpte_color_bars.png";
+                if (Surface != null)
                 {
-                    Surface.LoadFragmentShaderFromFile(defaultShaderPath, out var message);
-                    LogMessage($"Auto-loaded default shader: {defaultShader}");
-                    
-                }
-                else if (!File.Exists(defaultShaderPath))
-                {
-                    LogMessage($"Default shader not found: {defaultShaderPath}");
+                    Surface.LoadImageFromAvares(initialImagePath, out var message);
+                    LogMessage($"Loaded initial frame: smpte_color_bars.png");
                 }
                 
-                LogMessage("Ready - Select a shader from the dropdown");
+                LogMessage("Ready - Select a shader from the dropdown or use launchpad");
             }
             catch (Exception ex)
             {
@@ -283,24 +288,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // ========================================================================
     
     /// <summary>
-    /// Populates the shader picker dropdown with available .glsl files
+    /// Populates the media picker dropdown with available shaders and videos
     /// </summary>
     private void PopulatePicker(Page1? page = null) {
-        var items = Directory.EnumerateFiles(_shaderDir, "*.glsl")
+        // Get shader files
+        var shaderItems = Directory.EnumerateFiles(_shaderDir, "*.glsl")
             .OrderBy(p => System.IO.Path.GetFileName(p))
             .Select(p => System.IO.Path.GetFileName(p))
             .ToList();
 
+        // Get video files from library
+        var videoItems = _videoLibrary.Videos.Values
+            .OrderBy(v => v.FileName)
+            .Select(v => v.FileName)
+            .ToList();
+
+        // Combine shaders and videos (shaders first, then videos)
+        var allItems = new List<string>();
+        allItems.AddRange(shaderItems);
+        allItems.AddRange(videoItems);
+
         if (page != null) {
-            var shaderPicker = page.FindControl<Utils_ComboBox>("ShaderPicker");
-            if (shaderPicker != null) {
-                shaderPicker.ItemsSource = items;
-                if (items.Count > 0) {
-                    shaderPicker.SelectedIndex = 0;
+            var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
+            if (mediaPicker != null) {
+                mediaPicker.ItemsSource = allItems;
+                if (allItems.Count > 0) {
+                    mediaPicker.SelectedIndex = 0;
                 }
             }
             
-            // Populate pad picker with pad names (P01-P32)
+            // Populate pad picker with pad names (S01-S32)
             var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
             if (slotPicker != null) {
                 var slotNames = Enumerable.Range(1, 32)
@@ -626,6 +643,46 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void OnTouchpadClicked(object? sender, int padNumber)
     {
         LogMessage($"Pad {padNumber:D2} clicked");
+        
+        // Check if this pad has media assigned
+        if (_padMediaMapping.TryGetValue(padNumber, out var mediaPath))
+        {
+            // Determine if it's a shader or video
+            bool isShader = mediaPath.EndsWith(".glsl", StringComparison.OrdinalIgnoreCase) && File.Exists(mediaPath);
+            
+            if (isShader)
+            {
+                // Load shader
+                if (Surface != null)
+                {
+                    Surface.LoadFragmentShaderFromFile(mediaPath, out var message);
+                    LogMessage($"Loaded shader: {System.IO.Path.GetFileName(mediaPath)}");
+                }
+                
+                // Sync Child Window 2 if open
+                if (_childWindow2 != null && _childWindow2.IsVisible)
+                {
+                    _childWindow2.LoadShaderFromFile(mediaPath);
+                    _childWindow2.SyncShaderState();
+                }
+                
+                UpdateTabContent();
+            }
+            else
+            {
+                // It's a video - check if it exists in library
+                var video = _videoLibrary.GetVideo(mediaPath);
+                if (video != null)
+                {
+                    LogMessage($"Video assigned to pad {padNumber:D2}: {video.FileName} ({video.Width}x{video.Height}, {video.FrameCount} frames)");
+                    // TODO: Implement video playback when video surface is available
+                }
+                else
+                {
+                    LogMessage($"Video not found: {mediaPath}");
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -863,31 +920,65 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
     /// <summary>
-    /// Wires up event handlers for Page1 (Controls page) - shader selection, tempo, slots
+    /// Wires up event handlers for Page1 (Controls page) - media selection, tempo, slots
     /// </summary>
     private void Page1_WireUp(Page1 page)
     {
         // Find controls and wire up events
-        var shaderPicker = page.FindControl<Utils_ComboBox>("ShaderPicker");
+        var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
+        var applyButton = page.FindControl<Button>("ApplyButton");
+        var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
         var tempoButton = page.FindControl<Button>("TempoButton");
         var resetButton = page.FindControl<Button>("ResetButton");
         
-        if (shaderPicker != null)
+        // Wire up Apply button to assign media to selected pad
+        if (applyButton != null && mediaPicker != null && slotPicker != null)
         {
-            shaderPicker.SelectionChanged += (_, __) => {
-                if (shaderPicker.SelectedItem is string filename) {
-                    var fullPath = System.IO.Path.Combine(_shaderDir, filename);
-                    if (File.Exists(fullPath)) {
-                        Surface.LoadFragmentShaderFromFile(fullPath, out var message);
+            applyButton.Click += (_, __) =>
+            {
+                var selectedMedia = mediaPicker.SelectedItem as string;
+                var selectedSlot = slotPicker.SelectedItem as string;
+                
+                if (string.IsNullOrWhiteSpace(selectedMedia))
+                {
+                    LogMessage("Please select a media item");
+                    return;
+                }
+                
+                if (string.IsNullOrWhiteSpace(selectedSlot))
+                {
+                    LogMessage("Please select a slot");
+                    return;
+                }
+                
+                // Extract pad number from slot string (e.g., "S01" -> 1)
+                if (selectedSlot.StartsWith("S") && selectedSlot.Length >= 3)
+                {
+                    if (int.TryParse(selectedSlot.Substring(1), out int padNumber))
+                    {
+                        // Determine if it's a shader or video
+                        string mediaPath;
+                        bool isShader = File.Exists(System.IO.Path.Combine(_shaderDir, selectedMedia));
                         
-                        // Sync Child Window 2 if open - reload shader and sync state
-                        if (_childWindow2 != null && _childWindow2.IsVisible)
+                        if (isShader)
                         {
-                            _childWindow2.LoadShaderFromFile(fullPath);
-                            _childWindow2.SyncShaderState();
+                            mediaPath = System.IO.Path.Combine(_shaderDir, selectedMedia);
+                        }
+                        else
+                        {
+                            // Find video in library
+                            var video = _videoLibrary.Videos.Values.FirstOrDefault(v => v.FileName == selectedMedia);
+                            if (video == null)
+                            {
+                                LogMessage($"Video not found in library: {selectedMedia}");
+                                return;
+                            }
+                            mediaPath = video.FilePath;
                         }
                         
-                        UpdateTabContent();
+                        // Store mapping
+                        _padMediaMapping[padNumber] = mediaPath;
+                        LogMessage($"Assigned {selectedMedia} to pad {padNumber:D2}");
                     }
                 }
             };
@@ -1432,13 +1523,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             // Sync current shader if one is loaded
             if (PageContentControl.Content is Page1 controlsPage)
             {
-                var shaderPicker = controlsPage.FindControl<Utils_ComboBox>("ShaderPicker");
-                if (shaderPicker?.SelectedItem is string selectedShader)
+                var mediaPicker = controlsPage.FindControl<Utils_ComboBox>("MediaPicker");
+                if (mediaPicker?.SelectedItem is string selectedMedia)
                 {
-                    var fullPath = System.IO.Path.Combine(_shaderDir, selectedShader);
-                    if (File.Exists(fullPath))
+                    // Check if it's a shader
+                    var shaderPath = System.IO.Path.Combine(_shaderDir, selectedMedia);
+                    if (File.Exists(shaderPath))
                     {
-                        _childWindow2.LoadShaderFromFile(fullPath);
+                        _childWindow2.LoadShaderFromFile(shaderPath);
                         _childWindow2.SyncShaderState();
                     }
                 }

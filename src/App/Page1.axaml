@@ -34,12 +34,15 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="Media:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
 
-                <local:Utils_ComboBox x:Name="ShaderPicker" Width="200"/>
+                <local:Utils_ComboBox x:Name="MediaPicker" Width="200"/>
                 
  
                 <TextBlock Text="Slot:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
 
                 <local:Utils_ComboBox x:Name="SlotPicker" Width="100"/>
+
+                <Button x:Name="ApplyButton" Content="Apply" Width="60"/>
+
                 
             </StackPanel>
         </StackPanel>
