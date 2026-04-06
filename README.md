@@ -1,6 +1,6 @@
 # AvaloniaGlslPipeline
 
-AvaloniaGlslPipeline is a .NET desktop application built with Avalonia that loads and runs GLSL fragment shaders in real time.
+AvaloniaGlslPipeline is a .NET desktop application built with Avalonia UI that loads and runs GLSL fragment shaders in real time.
 
 ![image_screenshot](./assets/image_1.png)
 
