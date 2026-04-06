@@ -11,7 +11,7 @@ using System.ComponentModel;
 namespace AvaloniaGlslPipeline;
 
 // Manages the main window, shader selection, post-processing pipeline,
-// file watching, logging, and the REST API surface.
+// file watching, and logging.
 public partial class MainWindow : Window, INotifyPropertyChanged {
     
     // ========================================================================

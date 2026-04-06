@@ -36,10 +36,6 @@
         </PackageReference>
     </ItemGroup>
 
-    <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    </ItemGroup>
-
     <!-- ship shaders next to the exe (source: assets/Shaders/) -->
     <ItemGroup>
         <None Include="../../assets/Shaders/**/*.glsl">

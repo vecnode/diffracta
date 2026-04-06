@@ -1,8 +1,9 @@
 # AvaloniaGlslPipeline
 
 AvaloniaGlslPipeline is a .NET desktop application built with Avalonia that loads and runs GLSL fragment shaders in real time.
-It provides a shader preview workflow with a lightweight post-processing node pipeline and a small REST API for runtime control.
+It provides a shader preview workflow with a lightweight post-processing node pipeline for real-time visual iteration (some sliders).
 
+![image_screenshot]()
 
 ### Reproduce
 
@@ -19,7 +20,6 @@ dotnet run --project src/App/AvaloniaGlslPipeline.csproj
 ```
 
 
-
 ### Docker on Windows 11/WSL
 
 ```sh
@@ -32,14 +32,4 @@ docker build -f Dockerfile -t diffracta:latest ..
 # Run with host network mode (best compatibility):
 docker run --rm --network host -e DISPLAY='<YOUR_IP>:0.0' -e LIBGL_ALWAYS_INDIRECT=1 diffracta:latest
 ```
-
-
-### REST API
-
-- `GET /` - Get API information
-- `GET /api/shader/list` - List all available shader files
-- `GET /api/nodes` - Get all processing nodes state
-- `POST /api/nodes/{slot}/active` - Set node active state (slot: 0-3)
-- `POST /api/nodes/{slot}/value` - Set node value (slot: 0-3)
-- `GET /api/state` - Get application state
 
