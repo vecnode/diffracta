@@ -10,7 +10,7 @@ using System.Linq;
 namespace AvaloniaGlslPipeline;
 
 /// <summary>
-/// Custom styled ComboBox UserControl for shader selection
+/// Custom styled ComboBox control for shader selection
 /// </summary>
 public partial class Utils_ComboBox : UserControl
 {

@@ -70,7 +70,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 // Wire up processing node controls (clickable rectangles and sliders)
                 try
                 {
-                    // Wire up processing node controls via the UserControl
+                    // Wire up processing node controls via the nodes panel control
                     var nodesListBox = this.FindControl<Utils_NodesListBox>("NodesListBox");
                     if (nodesListBox != null)
                     {

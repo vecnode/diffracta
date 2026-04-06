@@ -6,7 +6,7 @@ using AvaloniaGlslPipeline.Graphics;
 namespace AvaloniaGlslPipeline;
 
 /// <summary>
-/// UserControl for displaying and managing shader processing nodes visualization
+/// Control for displaying and managing shader processing nodes visualization
 /// </summary>
 public partial class Utils_NodesListBox : UserControl
 {
