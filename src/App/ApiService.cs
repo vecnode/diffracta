@@ -7,7 +7,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// Service that manages the ASP.NET Core web server lifecycle.
@@ -137,7 +137,7 @@ public class ApiService
 
     private void RegisterEndpoints(WebApplication app)
     {
-        app.MapGet("/", () => Results.Json(new { message = "Diffracta API", version = "0.1.0" }));
+        app.MapGet("/", () => Results.Json(new { message = "Avalonia GLSL Pipeline API", version = "0.1.0" }));
         app.MapGet("/api/shader/list", () => ApiEndpoints.ListShaders());
         app.MapGet("/api/nodes", () => ApiEndpoints.GetProcessingNodes());
         app.MapPost("/api/nodes/{slot:int}/active", (int slot, SetActiveRequest r) => ApiEndpoints.SetNodeActive(slot, r));

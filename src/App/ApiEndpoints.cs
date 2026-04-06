@@ -4,7 +4,7 @@ using System.Linq;
 using Avalonia.Threading;
 using Microsoft.AspNetCore.Http;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// Static class containing all API endpoint implementations.
@@ -12,28 +12,12 @@ namespace Diffracta;
 /// </summary>
 public static class ApiEndpoints
 {
+    private const int NODE_COUNT = 4;
+
     /// <summary>
     /// Gets or sets the MainWindow instance. Set by Program.cs after the window is created.
     /// </summary>
     public static MainWindow? MainWindow { get; set; }
-
-    /// <summary>
-    /// Gets information about the currently loaded shader.
-    /// </summary>
-    public static IResult GetShaderInfo()
-    {
-        if (MainWindow?.Surface == null)
-        {
-            return Results.Json(new { error = "Shader surface not available" }, statusCode: 503);
-        }
-
-        var surface = MainWindow.Surface;
-        return Results.Json(new
-        {
-            isLoaded = surface.IsMainShaderLoaded,
-            shaderName = surface.IsMainShaderLoaded ? "Loaded" : "None"
-        });
-    }
 
     /// <summary>
     /// Lists all available shader files.
@@ -79,9 +63,9 @@ public static class ApiEndpoints
         }
 
         var surface = MainWindow.Surface;
-        var nodes = new object[6];
+        var nodes = new object[NODE_COUNT];
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < NODE_COUNT; i++)
         {
             nodes[i] = new
             {
@@ -106,9 +90,9 @@ public static class ApiEndpoints
             return Results.Json(new { error = "Shader surface not available" }, statusCode: 503);
         }
 
-        if (slot < 0 || slot >= 6)
+        if (slot < 0 || slot >= NODE_COUNT)
         {
-            return Results.Json(new { error = "Slot must be between 0 and 5" }, statusCode: 400);
+            return Results.Json(new { error = $"Slot must be between 0 and {NODE_COUNT - 1}" }, statusCode: 400);
         }
 
         try
@@ -143,9 +127,9 @@ public static class ApiEndpoints
             return Results.Json(new { error = "Shader surface not available" }, statusCode: 503);
         }
 
-        if (slot < 0 || slot >= 6)
+        if (slot < 0 || slot >= NODE_COUNT)
         {
-            return Results.Json(new { error = "Slot must be between 0 and 5" }, statusCode: 400);
+            return Results.Json(new { error = $"Slot must be between 0 and {NODE_COUNT - 1}" }, statusCode: 400);
         }
 
         if (request.Value < 0.0f || request.Value > 1.0f)

@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace Diffracta.Graphics;
+namespace AvaloniaGlslPipeline.Graphics;
 
 // ========================
 // ShaderSurface - OpenGL Shader Rendering Control
@@ -25,7 +25,7 @@ namespace Diffracta.Graphics;
 // 
 // Rendering Pipeline:
 //   1. Main Shader -> Framebuffer (if processing needed) or directly to Screen
-//   2. VFX Processing Chain (6 nodes: Saturation, Ping-Pong, Barrel, Node 4, Node 5, Blackout)
+//   2. VFX Processing Chain (4 nodes: Saturation, Ping-Pong, Barrel, Blackout)
 //   3. Final Render -> Screen
 public sealed class ShaderSurface : OpenGlControlBase {
     // ========================
@@ -38,16 +38,14 @@ public sealed class ShaderSurface : OpenGlControlBase {
     // ========================
     // Processing Node Arrays (VFX Chain)
     // ========================
-    // These arrays manage 6 VFX processing nodes that can be applied in sequence:
+    // These arrays manage 4 VFX processing nodes that can be applied in sequence:
     // Slot 0: Saturation
     // Slot 1: Ping-Pong Delay
     // Slot 2: Barrel Distortion
-    // Slot 3: Processing Node 4 (empty/reserved)
-    // Slot 4: Processing Node 5 (empty/reserved)
-    // Slot 5: Blackout
-    private uint[] _processing_nodePrograms = new uint[6]; // Compiled shader programs for each VFX node
-    private bool[] _processing_nodeActive = new bool[6];   // Which VFX nodes are currently active/enabled
-    private float[] _processing_nodeValues = new float[6]; // Parameter values for each VFX node (0.0 to 1.0 range)
+    // Slot 3: Blackout
+    private uint[] _processing_nodePrograms = new uint[4]; // Compiled shader programs for each VFX node
+    private bool[] _processing_nodeActive = new bool[4];   // Which VFX nodes are currently active/enabled
+    private float[] _processing_nodeValues = new float[4]; // Parameter values for each VFX node (0.0 to 1.0 range)
     
     // ========================
     // Vertex and Buffer Objects
@@ -68,8 +66,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
     // ========================
     // Each VFX node has its own dedicated framebuffer and texture.
     // This allows each node to read from the previous node's output and write its own result.
-    private uint[] _processing_nodeFramebuffers = new uint[6]; // Dedicated framebuffer per VFX node
-    private uint[] _processing_nodeTextures = new uint[6];     // Output texture per VFX node
+    private uint[] _processing_nodeFramebuffers = new uint[4]; // Dedicated framebuffer per VFX node
+    private uint[] _processing_nodeTextures = new uint[4];     // Output texture per VFX node
     
     // ========================
     // Ping-Pong Delay Feedback
@@ -326,24 +324,24 @@ public sealed class ShaderSurface : OpenGlControlBase {
     // ========================
     // Public API - Generic Processing Node Access
     // ========================
-    // These methods provide generic access to all 6 VFX processing nodes by slot index.
+    // These methods provide generic access to all 4 VFX processing nodes by slot index.
     
     /// <summary>
     /// Gets whether a processing node is active (enabled).
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <returns>True if the node is active, false otherwise</returns>
     public bool GetSlotActive(int slot) {
-        return slot >= 0 && slot < 6 ? _processing_nodeActive[slot] : false;
+        return slot >= 0 && slot < 4 ? _processing_nodeActive[slot] : false;
     }
 
     /// <summary>
     /// Sets whether a processing node is active (enabled).
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <param name="active">True to enable, false to disable</param>
     public void SetSlotActive(int slot, bool active) {
-        if (slot >= 0 && slot < 6) {
+        if (slot >= 0 && slot < 4) {
             _processing_nodeActive[slot] = active;
         }
     }
@@ -351,19 +349,19 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <summary>
     /// Gets the parameter value for a processing node.
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <returns>The node's parameter value (0.0 to 1.0)</returns>
     public float GetSlotValue(int slot) {
-        return slot >= 0 && slot < 6 ? _processing_nodeValues[slot] : 0.0f;
+        return slot >= 0 && slot < 4 ? _processing_nodeValues[slot] : 0.0f;
     }
 
     /// <summary>
     /// Sets the parameter value for a processing node.
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <param name="value">The value to set (will be clamped to 0.0-1.0)</param>
     public void SetSlotValue(int slot, float value) {
-        if (slot >= 0 && slot < 6) {
+        if (slot >= 0 && slot < 4) {
             _processing_nodeValues[slot] = Math.Clamp(value, 0.0f, 1.0f);
         }
     }
@@ -379,10 +377,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <summary>
     /// Gets the name/description of a processing node shader.
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <returns>The shader name, or empty string if not loaded</returns>
     public string GetProcessingNodeShaderName(int slot) {
-        if (slot < 0 || slot >= 6) return "";
+        if (slot < 0 || slot >= 4) return "";
         
         // Check if shader program is loaded
         if (_processing_nodePrograms[slot] == 0) return "";
@@ -392,9 +390,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
             0 => "Saturation",
             1 => "Ping-Pong Delay",
             2 => "Barrel Distortion",
-            3 => "Empty Node 4",
-            4 => "Empty Node 5",
-            5 => "Blackout",
+            3 => "Blackout",
             _ => ""
         };
     }
@@ -402,10 +398,10 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <summary>
     /// Checks if a processing node shader is loaded and ready to use.
     /// </summary>
-    /// <param name="slot">Slot index (0-5)</param>
+    /// <param name="slot">Slot index (0-3)</param>
     /// <returns>True if the shader is loaded, false otherwise</returns>
     public bool IsProcessingNodeShaderLoaded(int slot) {
-        if (slot < 0 || slot >= 6) return false;
+        if (slot < 0 || slot >= 4) return false;
         // All shaders are loaded from files now, check if program exists
         return _processing_nodePrograms[slot] != 0;
     }
@@ -536,7 +532,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
             _gl.Initialize();
             
             // Initialize processing node buffers to zero
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 _processing_nodeFramebuffers[i] = 0;
                 _processing_nodeTextures[i] = 0;
@@ -941,7 +937,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 }
                 
                 // Delete processing node buffers
-                for (int i = 0; i < 6; i++) {
+                for (int i = 0; i < 4; i++) {
                     if (_processing_nodeFramebuffers[i] != 0) {
                         _gl.glDeleteFramebuffers(1, ref _processing_nodeFramebuffers[i]);
                     }
@@ -965,7 +961,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
             // Check if we need two-pass rendering (processing nodes active) or single-pass (direct to screen).
             // When no VFX nodes are active, use single-pass (direct to screen) for best performance.
             bool needsProcessingNodes = false;
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (_processing_nodeActive[i] && _processing_nodePrograms[i] != 0)
                 {
@@ -1061,11 +1057,11 @@ public sealed class ShaderSurface : OpenGlControlBase {
                 // ========================
                 // Process VFX Nodes in Sequence
                 // ========================
-                // All 6 VFX nodes are processed in order: Saturation, Ping-Pong, Barrel, Node 4, Node 5, Blackout.
+                // VFX nodes are processed in order: Saturation, Ping-Pong, Barrel, Blackout.
                 // Each node reads from the previous node's output and writes to its own dedicated buffer.
                 // We track the last active node to ensure we always show the final processed output (last texture).
                 int lastActiveNodeIndex = -1;
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     if (_processing_nodeActive[i] && _processing_nodePrograms[i] != 0)
                     {
@@ -1117,7 +1113,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
                         {
                             _gl.glUniform1f(_gl.glGetUniformLocation(_processing_nodePrograms[i], "u_barrel_strength"), _processing_nodeValues[i]);
                         }
-                        else if (i == 5) // Blackout
+                        else if (i == 3) // Blackout
                         {
                             _gl.glUniform1f(_gl.glGetUniformLocation(_processing_nodePrograms[i], "u_blackout"), _processing_nodeValues[i]);
                         }
@@ -1300,7 +1296,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
             if (_passthroughProgram != 0) _gl.glDeleteProgram(_passthroughProgram);
             
             // Delete processing node shader programs
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (_processing_nodePrograms[i] != 0) _gl.glDeleteProgram(_processing_nodePrograms[i]);
             }
@@ -1310,7 +1306,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
             if (_framebuffer != 0) _gl.glDeleteFramebuffers(1, ref _framebuffer);
             
             // Delete processing node textures and framebuffers
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (_processing_nodeTextures[i] != 0) _gl.glDeleteTextures(1, ref _processing_nodeTextures[i]);
                 if (_processing_nodeFramebuffers[i] != 0) _gl.glDeleteFramebuffers(1, ref _processing_nodeFramebuffers[i]);
@@ -1344,7 +1340,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
     /// <summary>
     /// Loads an image from an avares resource and displays it as the initial shader.
     /// </summary>
-    /// <param name="avaresPath">Avares path to the image (e.g., "avares://Diffracta/Media/default/smpte_color_bars.png")</param>
+    /// <param name="avaresPath">Avares asset path to the image.</param>
     /// <param name="message">Output message indicating success or failure</param>
     public void LoadImageFromAvares(string avaresPath, out string message) {
         _currentImagePath = avaresPath;
@@ -1451,9 +1447,9 @@ public sealed class ShaderSurface : OpenGlControlBase {
         // ========================
         // Create VFX Processing Node Buffers
         // ========================
-        // Each of the 6 VFX nodes gets its own dedicated framebuffer and texture.
+        // Each processing node gets its own dedicated framebuffer and texture.
         // This allows each node to read from the previous node's output and write its own result.
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 4; i++)
         {
             // Create texture for this node's output
             _gl.glGenTextures(1, out _processing_nodeTextures[i]);
@@ -1505,8 +1501,8 @@ public sealed class ShaderSurface : OpenGlControlBase {
             // ========================
             // Initialize VFX Processing Node Arrays
             // ========================
-            // Initialize all 6 VFX slots to inactive with zero values
-            for (int i = 0; i < 6; i++)
+            // Initialize all VFX slots to inactive with zero values
+            for (int i = 0; i < 4; i++)
             {
                 _processing_nodePrograms[i] = 0;
                 _processing_nodeActive[i] = false;
@@ -1520,29 +1516,25 @@ public sealed class ShaderSurface : OpenGlControlBase {
             // Defaults are set to "off" or "bypass" state.
             _processing_nodeValues[0] = 0.0f; // Saturation default (0 = full color, 1 = grayscale)
             _processing_nodeValues[1] = 0.0f; // Ping-pong delay default
-            _processing_nodeValues[5] = 0.0f; // Blackout default (bypass)
+            _processing_nodeValues[3] = 0.0f; // Blackout default (bypass)
             // All slots start as inactive (OFF)
             
             // ========================
             // Load VFX Processing Node Shaders
             // ========================
-            // Load shader files into slots 0-5:
+            // Load shader files into slots 0-3:
             // Slot 0: Saturation
             // Slot 1: Ping-Pong Delay
             // Slot 2: Barrel Distortion
-            // Slot 3: Empty (reserved for future use)
-            // Slot 4: Empty (reserved for future use)
-            // Slot 5: Blackout (VFX node, not master command)
+            // Slot 3: Blackout (VFX node, not master command)
             string[] shaderFiles = {
                 "001_saturation.glsl",     // Slot 0: Saturation
                 "002_ping_pong_delay.glsl", // Slot 1: Ping-Pong Delay
                 "003_barrel.glsl",         // Slot 2: Barrel Distortion
-                "",                        // Slot 3 - empty
-                "",                        // Slot 4 - empty
-                "005_blackout.glsl"        // Slot 5: Blackout (VFX node)
+                "005_blackout.glsl"        // Slot 3: Blackout (VFX node)
             };
             
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (!string.IsNullOrEmpty(shaderFiles[i]))
                 {

@@ -2,7 +2,7 @@ using Avalonia;
 using System;
 using System.Threading.Tasks;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 internal static class Program {
     public static ApiService? ApiService { get; private set; }

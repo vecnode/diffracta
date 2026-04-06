@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 public partial class Page1 : UserControl
 {

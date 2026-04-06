@@ -7,7 +7,7 @@ using Avalonia.VisualTree;
 using System.Collections;
 using System.Linq;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// Custom styled ComboBox UserControl for shader selection

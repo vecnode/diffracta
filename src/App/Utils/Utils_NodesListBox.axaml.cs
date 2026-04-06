@@ -1,9 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
-using Diffracta.Graphics;
+using AvaloniaGlslPipeline.Graphics;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// UserControl for displaying and managing shader processing nodes visualization
@@ -46,8 +46,8 @@ public partial class Utils_NodesListBox : UserControl
         
         try
         {
-            // Wire up all 6 VFX processing nodes (0-5)
-            for (int i = 0; i < 6; i++)
+            // Wire up all processing nodes (0-3)
+            for (int i = 0; i < 4; i++)
             {
                 int slotIndex = i; // Capture for closure
                 
@@ -180,9 +180,9 @@ public partial class Utils_NodesListBox : UserControl
         // Track previous layer state for arrow visibility
         bool previousLayerActive = isMainShaderLoaded;
         
-        // Update all 6 VFX processing nodes
+        // Update all processing nodes
         // Always show all nodes, but indicate their state (loaded/unloaded, active/inactive)
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 4; i++)
         {
             var nodeRectButton = this.FindControl<Border>($"Node{i + 1}RectButton");
             var nodeRect = this.FindControl<Rectangle>($"Node{i + 1}Rect");

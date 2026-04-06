@@ -4,7 +4,7 @@
     <!-- keep all NuGet packages inside this repo -->
     <RestorePackagesPath>$(MSBuildThisFileDirectory)cache\packages</RestorePackagesPath>
 
-    <!-- optional niceties -->
+    <!-- optional -->
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
   </PropertyGroup>

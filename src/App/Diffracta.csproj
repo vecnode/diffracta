@@ -11,8 +11,8 @@
         <Version>0.1.0</Version>
         <AssemblyVersion>0.1.0.0</AssemblyVersion>
         <FileVersion>0.1.0.0</FileVersion>
-        <AssemblyName>Diffracta</AssemblyName>
-        <RootNamespace>Diffracta</RootNamespace>
+        <AssemblyName>AvaloniaGlslPipeline</AssemblyName>
+        <RootNamespace>AvaloniaGlslPipeline</RootNamespace>
         
         <!-- Application Icon (Windows only — .ico is not used on Linux/macOS) -->
         <ApplicationIcon Condition="$([MSBuild]::IsOSPlatform('Windows'))">../../assets/app-icon.ico</ApplicationIcon>
@@ -40,9 +40,9 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
-    <!-- ship shaders next to the exe -->
+    <!-- ship shaders next to the exe (source: assets/Shaders/) -->
     <ItemGroup>
-        <None Include="../Shaders/**/*.glsl">
+        <None Include="../../assets/Shaders/**/*.glsl">
             <Link>Shaders\%(RecursiveDir)%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
@@ -58,11 +58,7 @@
         </None>
     </ItemGroup>
 
-    <!-- Include media files as embedded resources -->
     <ItemGroup>
-        <AvaloniaResource Include="../Media/**/*">
-            <Link>Media\%(RecursiveDir)%(Filename)%(Extension)</Link>
-        </AvaloniaResource>
         <AvaloniaResource Include="Utils/Utils_Slider.axaml" />
         <AvaloniaResource Include="Utils/Utils_Button.axaml" />
         <AvaloniaResource Include="Utils/Utils_MenuBar.axaml" />

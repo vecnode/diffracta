@@ -2,7 +2,7 @@ using Avalonia.OpenGL;
 using System;
 using System.Runtime.InteropServices;
 
-namespace Diffracta.Graphics;
+namespace AvaloniaGlslPipeline.Graphics;
 
 // ========================
 // GLLoader - OpenGL Function Wrapper

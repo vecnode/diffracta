@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="using:Diffracta"
-             x:Class="Diffracta.Utils_ComboBox">
+             xmlns:local="using:AvaloniaGlslPipeline"
+             x:Class="AvaloniaGlslPipeline.Utils_ComboBox">
     
     <UserControl.Styles>
         <!-- ComboBox styling - grey background, white text -->

@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 using System;
 using System.IO;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 public partial class App : Application {
     public override void Initialize() {

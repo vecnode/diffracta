@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// Helper class for MenuBar styling

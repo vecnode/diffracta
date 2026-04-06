@@ -1,4 +1,4 @@
-namespace Diffracta;
+namespace AvaloniaGlslPipeline;
 
 /// <summary>
 /// Utility button styles - provides consistent grey button styling across the application
