@@ -1,7 +1,7 @@
-# Update and Setup Folder Script for Diffracta Application
+# Update and Setup Folder Script for AvaloniaGlslPipeline Application
 # Uses local package cache in ./cache directory
 
-Write-Host "=== Diffracta - Environment Setup ===" -ForegroundColor Green
+Write-Host "=== AvaloniaGlslPipeline - Environment Setup ===" -ForegroundColor Green
 
 # Create local cache directory if it doesn't exist
 if (-not (Test-Path "cache")) {
@@ -24,7 +24,7 @@ try {
 }
 
 # Check if we're in the correct directory
-if (-not (Test-Path "src/App/Diffracta.csproj")) {
+if (-not (Test-Path "src/App/AvaloniaGlslPipeline.csproj")) {
     Write-Host "Please run this script from the project root directory" -ForegroundColor Red
     exit 1
 }
@@ -36,7 +36,7 @@ Write-Host "Restoring NuGet packages to local cache" -ForegroundColor Yellow
 try {
     # First, download packages to local cache
     Write-Host "Downloading packages to ./cache directory" -ForegroundColor Cyan
-    dotnet restore src/App/Diffracta.csproj --packages ./cache
+    dotnet restore src/App/AvaloniaGlslPipeline.csproj --packages ./cache
     Write-Host "Packages restored to local cache successfully" -ForegroundColor Green
 } catch {
     Write-Host "Failed to restore packages: $($_.Exception.Message)" -ForegroundColor Red
@@ -47,7 +47,7 @@ try {
 Write-Host "`nInstalled packages:" -ForegroundColor Yellow
 $packageListOutput = $null
 try {
-    $packageListOutput = dotnet list src/App/Diffracta.csproj package
+    $packageListOutput = dotnet list src/App/AvaloniaGlslPipeline.csproj package
     $packageListOutput | Write-Host
 } catch {
     Write-Host "Could not list packages: $($_.Exception.Message)" -ForegroundColor Red
@@ -99,7 +99,7 @@ Write-Host "`nNote: ASP.NET Core is included as a FrameworkReference (not a Pack
 # Build the project
 Write-Host "`nBuilding project" -ForegroundColor Yellow
 try {
-    dotnet build src/App/Diffracta.csproj --configuration Release
+    dotnet build src/App/AvaloniaGlslPipeline.csproj --configuration Release
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Project built successfully" -ForegroundColor Green
     } else {
@@ -115,6 +115,6 @@ try {
 Write-Host "`n=== Environment Setup Complete ===" -ForegroundColor Green
 Write-Host "Packages are now stored locally in: .\cache" -ForegroundColor Cyan
 Write-Host "You can now run the application using: .\start.bat" -ForegroundColor Cyan
-Write-Host "Or directly with: dotnet run --project src/App/Diffracta.csproj" -ForegroundColor Cyan
+Write-Host "Or directly with: dotnet run --project src/App/AvaloniaGlslPipeline.csproj" -ForegroundColor Cyan
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Diffracta - Environment Setup (Linux/macOS)
+# AvaloniaGlslPipeline - Environment Setup (Linux/macOS)
 set -e
 
-echo "=== Diffracta - Environment Setup ==="
+echo "=== AvaloniaGlslPipeline - Environment Setup ==="
 
 # Create local cache directory if it doesn't exist
 if [ ! -d "cache" ]; then
@@ -37,7 +37,7 @@ else
 fi
 
 # Check we're in the repo root
-if [ ! -f "src/App/Diffracta.csproj" ]; then
+if [ ! -f "src/App/AvaloniaGlslPipeline.csproj" ]; then
     echo "ERROR: Please run this script from the project root directory."
     exit 1
 fi
@@ -46,13 +46,13 @@ echo "Checking project dependencies"
 
 # Restore NuGet packages to local cache
 echo "Restoring NuGet packages to local cache"
-dotnet restore src/App/Diffracta.csproj --packages ./cache
+dotnet restore src/App/AvaloniaGlslPipeline.csproj --packages ./cache
 echo "Packages restored to local cache successfully"
 
 # List installed packages
 echo ""
 echo "Installed packages:"
-dotnet list src/App/Diffracta.csproj package || true
+dotnet list src/App/AvaloniaGlslPipeline.csproj package || true
 
 echo ""
 echo "Note: ASP.NET Core is included as a FrameworkReference (not a PackageReference)"
@@ -60,11 +60,11 @@ echo "Note: ASP.NET Core is included as a FrameworkReference (not a PackageRefer
 # Build
 echo ""
 echo "Building project"
-dotnet build src/App/Diffracta.csproj --configuration Release
+dotnet build src/App/AvaloniaGlslPipeline.csproj --configuration Release
 echo "Project built successfully"
 
 echo ""
 echo "=== Environment Setup Complete ==="
 echo "Packages stored locally in: ./cache"
 echo "Run the application with: ./scripts/start_app.sh"
-echo "Or directly with         : dotnet run --project src/App/Diffracta.csproj"
+echo "Or directly with         : dotnet run --project src/App/AvaloniaGlslPipeline.csproj"

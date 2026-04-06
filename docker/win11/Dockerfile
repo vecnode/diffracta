@@ -13,12 +13,12 @@ COPY NuGet.config .
 COPY Directory.Build.props .
 
 # Copy only the project file first to leverage Docker layer caching for restore
-COPY src/App/Diffracta.csproj App/
+COPY src/App/AvaloniaGlslPipeline.csproj App/
 
 # Restore dependencies
 # Override RestorePackagesPath to use default NuGet cache (ignore local cache)
 # Also add nuget.org source explicitly in case NuGet.config has issues
-RUN dotnet restore App/Diffracta.csproj \
+RUN dotnet restore App/AvaloniaGlslPipeline.csproj \
     -p:RestorePackagesPath=/root/.nuget/packages \
     --source https://api.nuget.org/v3/index.json
 
@@ -35,11 +35,11 @@ COPY src/Media/ Media/
 COPY src/App/ App/
 
 # Build the application (restore again to ensure packages are available)
-RUN dotnet build App/Diffracta.csproj -c Release -p:RestorePackagesPath=/root/.nuget/packages
+RUN dotnet build App/AvaloniaGlslPipeline.csproj -c Release -p:RestorePackagesPath=/root/.nuget/packages
 
 # Publish the application for Linux (Docker containers run Linux)
-# Force framework-dependent DLL output (no native apphost) so ENTRYPOINT 'dotnet Diffracta.dll' works
-RUN dotnet publish App/Diffracta.csproj \
+# Force framework-dependent DLL output (no native apphost) so ENTRYPOINT 'dotnet AvaloniaGlslPipeline.dll' works
+RUN dotnet publish App/AvaloniaGlslPipeline.csproj \
     -c Release \
     -r linux-x64 \
     --self-contained false \
@@ -93,5 +93,5 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Set entrypoint to run the application
-ENTRYPOINT ["dotnet", "Diffracta.dll"]
+ENTRYPOINT ["dotnet", "AvaloniaGlslPipeline.dll"]
 

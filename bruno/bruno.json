@@ -1,6 +1,6 @@
 {
   "version": "0.1",
-  "name": "Diffracta API",
+  "name": "AvaloniaGlslPipeline API",
   "type": "collection",
   "ignore": [
     "node_modules",

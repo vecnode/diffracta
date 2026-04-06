@@ -1,7 +1,7 @@
-# Script to run Diffracta Docker container with X server support
+# Script to run AvaloniaGlslPipeline Docker container with X server support
 # Make sure XLaunch (VcXsrv) is running before executing this script
 
-Write-Host "=== Diffracta Docker Runner ===" -ForegroundColor Green
+Write-Host "=== AvaloniaGlslPipeline Docker Runner ===" -ForegroundColor Green
 Write-Host ""
 
 # Check if XLaunch is running

@@ -1,8 +1,8 @@
 @echo off
-REM Diffracta Application Launcher
+REM AvaloniaGlslPipeline Application Launcher
 REM This batch file calls the PowerShell script
 
-echo === Diffracta ===
+echo === AvaloniaGlslPipeline ===
 echo Calling PowerShell launcher script
 
 REM Check if PowerShell is available

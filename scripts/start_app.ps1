@@ -1,4 +1,4 @@
-# Diffracta Application Launcher
+# AvaloniaGlslPipeline Application Launcher
 
 $ErrorActionPreference = 'Stop'
 
@@ -7,14 +7,14 @@ if ($IsWindows -or $env:OS -eq "Windows_NT") {
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 }
 
-Write-Host "=== Diffracta ===" -ForegroundColor Green
+Write-Host "=== AvaloniaGlslPipeline ===" -ForegroundColor Green
 
 # Function to cleanup on exit
 function Cleanup {
     Write-Host "Cleaning up processes" -ForegroundColor Yellow
     # Kill any lingering dotnet processes for this project
     Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -like "*Diffracta*"
+        $_.CommandLine -like "*AvaloniaGlslPipeline*"
     } | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
@@ -31,17 +31,17 @@ try {
 }
 
 # Check if project exists
-if (-not (Test-Path "src/App/Diffracta.csproj")) {
+if (-not (Test-Path "src/App/AvaloniaGlslPipeline.csproj")) {
     Write-Host "Error: Project file not found." -ForegroundColor Red
     exit 1
 }
 
-# Clean up any existing Diffracta processes before starting
-Write-Host "Cleaning up any existing Diffracta processes" -ForegroundColor Yellow
-$existingProcesses = Get-Process -Name "Diffracta" -ErrorAction SilentlyContinue
+# Clean up any existing AvaloniaGlslPipeline processes before starting
+Write-Host "Cleaning up any existing AvaloniaGlslPipeline processes" -ForegroundColor Yellow
+$existingProcesses = Get-Process -Name "AvaloniaGlslPipeline" -ErrorAction SilentlyContinue
 if ($existingProcesses) {
     $existingProcesses | ForEach-Object {
-        Write-Host "Stopping existing Diffracta process (PID: $($_.Id))" -ForegroundColor Yellow
+        Write-Host "Stopping existing AvaloniaGlslPipeline process (PID: $($_.Id))" -ForegroundColor Yellow
         Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
     }
     # Wait for processes to fully terminate and release file locks
@@ -54,14 +54,14 @@ if ($existingProcesses) {
 try {
     # Restore packages to local cache first
     Write-Host "Restoring packages to local cache" -ForegroundColor Yellow
-    dotnet restore src/App/Diffracta.csproj --packages ./cache
+    dotnet restore src/App/AvaloniaGlslPipeline.csproj --packages ./cache
 
     Write-Host "Building project" -ForegroundColor Yellow
-    dotnet build src/App/Diffracta.csproj
+    dotnet build src/App/AvaloniaGlslPipeline.csproj
     
     # Run the application
     Write-Host "Launching application" -ForegroundColor Yellow
-    dotnet watch run --project src/App/Diffracta.csproj
+    dotnet watch run --project src/App/AvaloniaGlslPipeline.csproj
 }
 catch {
     Write-Host "Error running application: $($_.Exception.Message)" -ForegroundColor Red

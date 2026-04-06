@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Diffracta Application Launcher (Linux/macOS)
+# AvaloniaGlslPipeline Application Launcher (Linux/macOS)
 set -e
 
-echo "=== Diffracta ==="
+echo "=== AvaloniaGlslPipeline ==="
 
-# Cleanup helper — kill any lingering Diffracta processes
+# Cleanup helper — kill any lingering AvaloniaGlslPipeline processes
 cleanup() {
     echo "Cleaning up processes"
-    pkill -f "Diffracta" 2>/dev/null || true
+    pkill -f "AvaloniaGlslPipeline" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -19,25 +19,25 @@ fi
 echo "Using .NET SDK: $(dotnet --version)"
 
 # Check we're in the repo root
-if [ ! -f "src/App/Diffracta.csproj" ]; then
+if [ ! -f "src/App/AvaloniaGlslPipeline.csproj" ]; then
     echo "ERROR: Project file not found. Run from the project root directory."
     exit 1
 fi
 
-# Kill any existing Diffracta instance
-echo "Cleaning up any existing Diffracta processes"
-pkill -f "Diffracta" 2>/dev/null && sleep 0.5 && echo "Cleanup complete" || echo "No existing processes found"
+# Kill any existing AvaloniaGlslPipeline instance
+echo "Cleaning up any existing AvaloniaGlslPipeline processes"
+pkill -f "AvaloniaGlslPipeline" 2>/dev/null && sleep 0.5 && echo "Cleanup complete" || echo "No existing processes found"
 
 # Restore packages
 echo "Restoring packages to local cache"
-dotnet restore src/App/Diffracta.csproj --packages ./cache
+dotnet restore src/App/AvaloniaGlslPipeline.csproj --packages ./cache
 
 # Build
 echo "Building project"
-dotnet build src/App/Diffracta.csproj
+dotnet build src/App/AvaloniaGlslPipeline.csproj
 
 # Run
 echo "Launching application"
-dotnet watch run --project src/App/Diffracta.csproj
+dotnet watch run --project src/App/AvaloniaGlslPipeline.csproj
 
 echo "Application finished"

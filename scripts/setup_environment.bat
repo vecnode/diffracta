@@ -1,9 +1,9 @@
 @echo off
-REM Update and Setup Folder Script for Diffracta Application
+REM Update and Setup Folder Script for AvaloniaGlslPipeline Application
 REM Uses local package cache in ./cache directory
 REM This batch file calls the PowerShell script
 
-echo === Diffracta - Environment Setup ===
+echo === AvaloniaGlslPipeline - Environment Setup ===
 echo Calling PowerShell setup script
 
 REM Check if PowerShell is available
