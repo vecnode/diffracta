@@ -15,111 +15,65 @@ using System.Threading;
 
 namespace AvaloniaGlslPipeline.Graphics;
 
-// ========================
-// ShaderSurface - OpenGL Shader Rendering Control
-// ========================
-// This class manages the rendering of shaders in the application, including:
-// - Main shader rendering (the primary visual output)
-// - Processing node pipeline (VFX effects applied in sequence)
-// - Framebuffer management for multi-pass rendering
-// 
-// Rendering Pipeline:
-//   1. Main Shader -> Framebuffer (if processing needed) or directly to Screen
-//   2. VFX Processing Chain (4 nodes: Saturation, Ping-Pong, Barrel, Blackout)
-//   3. Final Render -> Screen
+// OpenGL rendering control for main shaders and post-processing nodes.
 public sealed class ShaderSurface : OpenGlControlBase {
-    // ========================
-    // OpenGL Context and Programs
-    // ========================
-    private GLLoader? _gl; // OpenGL function loader/wrapper
-    private uint _program = 0; // Main shader program (the primary visual shader)
-    private uint _passthroughProgram = 0; // Simple passthrough shader for copying textures to screen
+    private GLLoader? _gl;
+    private uint _program = 0;
+    private uint _passthroughProgram = 0;
     
-    // ========================
-    // Processing Node Arrays (VFX Chain)
-    // ========================
-    // These arrays manage 4 VFX processing nodes that can be applied in sequence:
-    // Slot 0: Saturation
-    // Slot 1: Ping-Pong Delay
-    // Slot 2: Barrel Distortion
-    // Slot 3: Blackout
-    private uint[] _processing_nodePrograms = new uint[4]; // Compiled shader programs for each VFX node
-    private bool[] _processing_nodeActive = new bool[4];   // Which VFX nodes are currently active/enabled
-    private float[] _processing_nodeValues = new float[4]; // Parameter values for each VFX node (0.0 to 1.0 range)
+    // Post-processing slots: Saturation, Ping-Pong Delay, Barrel Distortion, Blackout.
+    private uint[] _processing_nodePrograms = new uint[4];
+    private bool[] _processing_nodeActive = new bool[4];
+    private float[] _processing_nodeValues = new float[4];
     
-    // ========================
-    // Vertex and Buffer Objects
-    // ========================
-    private uint _vao = 0; // Vertex Array Object (contains vertex data layout)
-    private uint _vbo = 0; // Vertex Buffer Object (contains fullscreen triangle vertices)
+    private uint _vao = 0;
+    private uint _vbo = 0;
     
-    // ========================
-    // Main Shader Framebuffer
-    // ========================
-    // Used for two-pass rendering: main shader renders to this framebuffer,
-    // then processing nodes read from it and render to screen.
-    private uint _framebuffer = 0; // Framebuffer for main shader output
-    private uint _texture = 0; // Texture containing main shader output
+    // Main shader render target.
+    private uint _framebuffer = 0;
+    private uint _texture = 0;
     
-    // ========================
-    // Processing Node Framebuffers
-    // ========================
-    // Each VFX node has its own dedicated framebuffer and texture.
-    // This allows each node to read from the previous node's output and write its own result.
-    private uint[] _processing_nodeFramebuffers = new uint[4]; // Dedicated framebuffer per VFX node
-    private uint[] _processing_nodeTextures = new uint[4];     // Output texture per VFX node
+    // Per-node render targets.
+    private uint[] _processing_nodeFramebuffers = new uint[4];
+    private uint[] _processing_nodeTextures = new uint[4];
     
-    // ========================
-    // Ping-Pong Delay Feedback
-    // ========================
-    // The Ping-Pong Delay effect (slot 1) needs to read from the previous frame's output
-    // to create a delay/echo effect. This buffer stores that previous frame.
-    private uint _pingPongFeedbackTexture = 0; // Texture storing previous frame for ping-pong delay
-    private uint _pingPongFeedbackFramebuffer = 0; // Framebuffer for ping-pong feedback
+    // Feedback buffer for the ping-pong delay effect.
+    private uint _pingPongFeedbackTexture = 0;
+    private uint _pingPongFeedbackFramebuffer = 0;
     
-    // ========================
-    // Timing and Uniforms
-    // ========================
-    private readonly Stopwatch _clock = Stopwatch.StartNew(); // Clock for u_time uniform (animation)
-    private int _uTime = -1; // Uniform location for u_time (cached for performance)
-    private int _uRes = -1;  // Uniform location for u_resolution (cached for performance)
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private int _uTime = -1;
+    private int _uRes = -1;
     
-    // ========================
-    // Shader Loading State
-    // ========================
-    private string? _currentFragPath; // Path to shader file that should be loaded
-    private string? _loadedFragPath;  // Path to shader file that is currently loaded
-    private Action<string>? _logCallback; // Callback for logging messages
+    private string? _currentFragPath;
+    private string? _loadedFragPath;
+    private Action<string>? _logCallback;
     
-    // Image Texture State
-    // ========================
-    private uint _imageTexture = 0; // Texture for displaying images
+    // Image texture state.
+    private uint _imageTexture = 0;
     private int _imageWidth = 0;
     private int _imageHeight = 0;
-    private string? _currentImagePath; // Path to image that should be loaded
-    private string? _loadedImagePath;  // Path to image that is currently loaded
+    private string? _currentImagePath;
+    private string? _loadedImagePath;
     
-    // Video Texture State (Advanced YUV Architecture)
-    // ========================
-    // YUV video frame structure for efficient decoding and upload
-    // NOTE: These fields will be used when YUV architecture is fully implemented
-    #pragma warning disable CS0649 // Field is never assigned (will be used in full YUV implementation)
+    // Video pipeline placeholders retained for future media support.
+    #pragma warning disable CS0649 // Reserved for planned media pipeline work.
     private struct YuvFrame
     {
-        public byte[]? YPlane;   // Luminance plane (width * height bytes)
-        public byte[]? UvPlane;  // Chrominance plane (width * height / 2 bytes for NV12)
+        public byte[]? YPlane;
+        public byte[]? UvPlane;
         public int Width;
         public int Height;
         public bool IsValid;
     }
     
-    // PBO (Pixel Buffer Object) for async GPU uploads
+    // PBO state for asynchronous GPU uploads.
     private struct VideoPbo
     {
-        public uint PboId;           // PBO handle
-        public bool InUse;           // Whether this PBO is currently being used
-        public IntPtr MappedPtr;     // Mapped buffer pointer (for writing)
-        public int Size;             // Buffer size in bytes
+        public uint PboId;
+        public bool InUse;
+        public IntPtr MappedPtr;
+        public int Size;
     }
     #pragma warning restore CS0649
     
@@ -143,7 +97,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
         {
             lock (_lock)
             {
-                if (_count >= _capacity) return false; // Ring full
+                if (_count >= _capacity) return false;
                 _frames[_writeIndex] = frame;
                 _writeIndex = (_writeIndex + 1) % _capacity;
                 _count++;
@@ -161,7 +115,7 @@ public sealed class ShaderSurface : OpenGlControlBase {
                     return false;
                 }
                 frame = _frames[_readIndex];
-                _frames[_readIndex] = default; // Clear
+                _frames[_readIndex] = default;
                 _readIndex = (_readIndex + 1) % _capacity;
                 _count--;
                 return true;
@@ -183,16 +137,15 @@ public sealed class ShaderSurface : OpenGlControlBase {
         }
     }
     
-    // Video texture handles (double-buffered Y and UV planes)
-    // NOTE: These will be used when YUV architecture is fully implemented
-    #pragma warning disable CS0414 // Field is assigned but never used (will be used in full YUV implementation)
-    private uint _videoTextureY_Front = 0;  // Front buffer Y plane
-    private uint _videoTextureY_Back = 0;    // Back buffer Y plane
-    private uint _videoTextureUV_Front = 0;  // Front buffer UV plane
-    private uint _videoTextureUV_Back = 0;   // Back buffer UV plane
-    private bool _useFrontBuffer = true;     // Toggle between front/back buffers
+    // Double-buffered video texture handles.
+    #pragma warning disable CS0414 // Reserved for planned media pipeline work.
+    private uint _videoTextureY_Front = 0;
+    private uint _videoTextureY_Back = 0;
+    private uint _videoTextureUV_Front = 0;
+    private uint _videoTextureUV_Back = 0;
+    private bool _useFrontBuffer = true;
     
-    // PBO ring buffers for async uploads (2-4 PBOs per plane)
+    // PBO ring buffers for uploads.
     private const int PBO_RING_SIZE = 3;
     private VideoPbo[] _pboRingY = new VideoPbo[PBO_RING_SIZE];   // PBOs for Y plane
     private VideoPbo[] _pboRingUV = new VideoPbo[PBO_RING_SIZE];   // PBOs for UV plane
@@ -200,37 +153,32 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private int _pboWriteIndexUV = 0;
     #pragma warning restore CS0414
     
-    // Legacy RGBA texture (kept for backward compatibility during transition)
-    private uint _videoTexture = 0; // Deprecated - will be removed after YUV migration
+    private uint _videoTexture = 0;
     
     private int _videoWidth = 0;
     private int _videoHeight = 0;
-    private string? _currentVideoPath; // Path to video that should be loaded
-    private string? _loadedVideoPath;  // Path to video that is currently loaded
-    private readonly object _videoFrameLock = new(); // Lock for video frame updates
+    private string? _currentVideoPath;
+    private string? _loadedVideoPath;
+    private readonly object _videoFrameLock = new();
     
-    // Ring buffer for decoded YUV frames (CPU side)
-    // NOTE: Will be used when YUV architecture is fully implemented
-    #pragma warning disable CS0169 // Field is never used (will be used in full YUV implementation)
+    // Ring buffer for decoded YUV frames.
+    #pragma warning disable CS0169 // Reserved for planned media pipeline work.
     private VideoFrameRingBuffer? _videoFrameRing;
     #pragma warning restore CS0169
     
-    // Legacy RGBA frame support (for transition period)
-    private byte[]? _pendingVideoFrame; // RGBA frame data (deprecated)
-    private bool _hasNewVideoFrame; // Flag indicating a new frame is ready
-    private bool _videoTextureInitialized = false; // Track if texture has been allocated (use glTexSubImage2D after first)
+    private byte[]? _pendingVideoFrame;
+    private bool _hasNewVideoFrame;
+    private bool _videoTextureInitialized = false;
     
-    // Frame buffer for smoother playback (decode ahead)
+    // Decode-ahead frame queue.
     private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _videoFrameQueue = new();
-    private const int MAX_QUEUED_FRAMES = 3; // Decode 2-3 frames ahead for smooth playback
+    private const int MAX_QUEUED_FRAMES = 3;
     
-    // Video Preload Cache
-    // ========================
-    // Preloads mapped videos into memory for instant switching
+    // Video preload cache.
     private class PreloadedVideo
     {
         public string FilePath { get; set; } = string.Empty;
-        public byte[]? FirstFrame { get; set; } // First frame in RGBA format (preloaded for instant display)
+        public byte[]? FirstFrame { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public double Fps { get; set; }
@@ -243,21 +191,14 @@ public sealed class ShaderSurface : OpenGlControlBase {
         public bool HasNewFrame { get; set; }
     }
     
-    private readonly Dictionary<string, PreloadedVideo> _videoCache = new(); // Cache of preloaded videos
-    private readonly object _cacheLock = new(); // Lock for cache access
+    private readonly Dictionary<string, PreloadedVideo> _videoCache = new();
+    private readonly object _cacheLock = new();
     
-    // ========================
-    // Project Size (Global Output Resolution)
-    // ========================
-    // Project size defines the consistent output resolution for all videos/media.
-    // Videos will be scaled to this size regardless of their native resolution.
-    private int _projectWidth = 1920;  // Default project width
-    private int _projectHeight = 1080; // Default project height
+    // Default output resolution.
+    private int _projectWidth = 1920;
+    private int _projectHeight = 1080;
     
-    // ========================
-    // Framebuffer Size Tracking
-    // ========================
-    // Framebuffers must be recreated when the control size changes.
+    // Current framebuffer size.
     private int _lastWidth = 0;  // Last known width (for detecting size changes)
     private int _lastHeight = 0; // Last known height (for detecting size changes)
 

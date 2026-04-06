@@ -4,34 +4,19 @@ using System.Runtime.InteropServices;
 
 namespace AvaloniaGlslPipeline.Graphics;
 
-// ========================
-// GLLoader - OpenGL Function Wrapper
-// ========================
-// This class provides a type-safe wrapper around OpenGL functions accessed through Avalonia's GlInterface.
-// It dynamically loads OpenGL function pointers at runtime and provides delegates for calling them.
-// This approach is necessary because OpenGL functions are platform-specific and loaded dynamically.
+// Loads OpenGL function pointers from Avalonia's GlInterface and exposes typed delegates.
 internal sealed class GLLoader
 {
-    // ========================
-    // Fields
-    // ========================
-    private readonly GlInterface _gl; // Avalonia's OpenGL interface for accessing function pointers
+    private readonly GlInterface _gl;
 
-    // ========================
-    // Constructor
-    // ========================
     public GLLoader(GlInterface gl) { _gl = gl; }
 
-    // ========================
-    // Helper Methods
-    // ========================
     /// <summary>
-    /// Dynamically loads an OpenGL function by name and converts it to a typed delegate.
-    /// Throws an exception if the function is not found (OpenGL function not available).
+    /// Loads an OpenGL function and converts it to a typed delegate.
     /// </summary>
-    /// <typeparam name="T">The delegate type matching the OpenGL function signature</typeparam>
-    /// <param name="name">The name of the OpenGL function (e.g., "glViewport")</param>
-    /// <returns>A delegate that can be called to invoke the OpenGL function</returns>
+    /// <typeparam name="T">Delegate type matching the OpenGL signature.</typeparam>
+    /// <param name="name">OpenGL function name (for example, "glViewport").</param>
+    /// <returns>Callable delegate for the requested OpenGL function.</returns>
     private T Load<T>(string name) where T : Delegate
     {
         var ptr = _gl.GetProcAddress(name);
@@ -39,11 +24,7 @@ internal sealed class GLLoader
         return Marshal.GetDelegateForFunctionPointer<T>(ptr);
     }
 
-    // ========================
-    // OpenGL Function Delegates
-    // ========================
-    // These delegates define the function signatures for OpenGL calls.
-    // All use Cdecl calling convention as required by OpenGL.
+    // OpenGL function delegate definitions (Cdecl).
     
     // Viewport and Clear Functions
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glViewport_d(int x,int y,int w,int h);
@@ -98,10 +79,7 @@ internal sealed class GLLoader
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate uint glCheckFramebufferStatus_d(uint target);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void glDeleteFramebuffers_d(int n, ref uint framebuffers);
 
-    // ========================
-    // OpenGL Constants
-    // ========================
-    // These constants match OpenGL enum values and are used throughout the rendering code.
+    // OpenGL constants used by the renderer.
     
     // Buffer and Clear Constants
     public const uint GL_COLOR_BUFFER_BIT = 0x00004000;
@@ -132,11 +110,7 @@ internal sealed class GLLoader
     public const uint GL_COLOR_ATTACHMENT0 = 0x8CE0;
     public const uint GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 
-    // ========================
-    // Loaded Function Pointers
-    // ========================
-    // These fields hold the actual function delegates loaded at runtime.
-    // They are initialized by the Initialize() method and used throughout the rendering code.
+    // Loaded OpenGL function delegates.
     
     // Viewport and Clear
     public glViewport_d glViewport = null!;
@@ -191,13 +165,8 @@ internal sealed class GLLoader
     public glCheckFramebufferStatus_d glCheckFramebufferStatus = null!;
     public glDeleteFramebuffers_d glDeleteFramebuffers = null!;
 
-    // ========================
-    // Initialization
-    // ========================
     /// <summary>
-    /// Loads all OpenGL function pointers at runtime.
-    /// This must be called before any OpenGL operations can be performed.
-    /// Throws an exception if any required function cannot be loaded.
+    /// Loads all required OpenGL functions.
     /// </summary>
     public void Initialize()
     {
