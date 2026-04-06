@@ -1,35 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Diffracta"
+             xmlns:gfx="using:Diffracta.Graphics"
              x:Class="Diffracta.Page1"
              x:DataType="local:MainWindow">
     <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="0"/>
         </Grid.RowDefinitions>
         
         <StackPanel Orientation="Vertical" Spacing="8" Margin="8,4" Grid.Row="0">
-            <!-- Tempo Clock Controls -->
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button x:Name="TempoButton" 
-                        Content="{Binding TempoButtonText}" 
-                        Width="100">
-                    <!-- Click handler wired up in MainWindow.Page1_WireUp -->
-                    <!-- Uses default Utils_Button style -->
-                </Button>
-                <Button x:Name="ResetButton" 
-                        Content="Reset" 
-                        Width="60"/>
-                        <!-- Click handler wired up in MainWindow.Page1_WireUp -->
-                <Button x:Name="SplitVerticalButton" 
-                        Content="Split Vertical" 
-                        Width="100"
-                        Click="OnSplitVerticalClick"/>
-                
-                <local:Utils_GlobalTempoDisplay x:Name="TempoDisplay"/>
-                
                 <!-- Project Size Controls -->
                 <Border Width="1" Background="#555555" Margin="8,0" VerticalAlignment="Stretch"/>
                 <TextBlock Text="Project Size:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
@@ -51,40 +33,31 @@
                 <TextBlock Text="Media:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
 
                 <local:Utils_ComboBox x:Name="MediaPicker" Width="200"/>
-                
- 
-                <TextBlock Text="Slot:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
-
-                <local:Utils_ComboBox x:Name="SlotPicker" Width="100"/>
 
                 <Button x:Name="ApplyButton" Content="Apply" Width="60"/>
-
-                
             </StackPanel>
+
+            <Border Width="202"
+                    Height="114"
+                    BorderBrush="#555555"
+                    BorderThickness="1"
+                    ClipToBounds="True">
+                <gfx:ShaderSurface x:Name="Page1MainTexturePreview"
+                                  Width="200"
+                                  Height="112"
+                                  Margin="0"
+                                  Focusable="True"
+                                  ClipToBounds="True"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"/>
+            </Border>
         </StackPanel>
 
         <Separator Height="1" Background="#555555" Margin="8,4"/>
         
         <ScrollViewer x:Name="MainScrollViewer" Grid.Row="1" Margin="8,0,8,8">
-            <StackPanel Spacing="12">
-
-                <local:Utils_Launchpad x:Name="Launchpad"/>
-                
-                
-            </StackPanel>
+            <StackPanel Spacing="12"/>
         </ScrollViewer>
-        
-        <!-- This will be dynamically shown when split -->
-        <Grid x:Name="SplitGrid" Grid.Row="2" Margin="8,0,8,8" IsVisible="False">
-            <Border Background="Pink" BorderBrush="Black" BorderThickness="1" Padding="12" CornerRadius="0">
-                <TextBlock x:Name="RandomTextBlock" 
-                           Text="Random Text for Testing" 
-                           Foreground="White" 
-                           FontSize="16"
-                           HorizontalAlignment="Left"
-                           VerticalAlignment="Top"/>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>
 

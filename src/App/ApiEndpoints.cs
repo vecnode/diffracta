@@ -189,7 +189,6 @@ public static class ApiEndpoints
         {
             return Results.Json(new
             {
-                performanceMode = MainWindow.IsPerformanceMode,
                 shaderLoaded = MainWindow.Surface?.IsMainShaderLoaded ?? false
             });
         }
@@ -199,42 +198,9 @@ public static class ApiEndpoints
         }
     }
 
-    /// <summary>
-    /// Sets the performance mode.
-    /// </summary>
-    public static IResult SetPerformanceMode(SetPerformanceModeRequest request)
-    {
-        if (MainWindow == null)
-        {
-            return Results.Json(new { error = "Application not initialized" }, statusCode: 503);
-        }
-
-        try
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (request.Enabled != MainWindow.IsPerformanceMode)
-                {
-                    MainWindow.TogglePerformanceMode();
-                }
-            }, DispatcherPriority.Normal);
-
-            System.Threading.Thread.Sleep(50);
-
-            return Results.Json(new { 
-                success = true, 
-                performanceMode = request.Enabled 
-            });
-        }
-        catch (Exception ex)
-        {
-            return Results.Json(new { error = ex.Message }, statusCode: 500);
-        }
-    }
 }
 
 // Request/Response DTOs
 public record SetActiveRequest(bool Active);
 public record SetValueRequest(float Value);
-public record SetPerformanceModeRequest(bool Enabled);
 

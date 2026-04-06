@@ -143,7 +143,6 @@ public class ApiService
         app.MapPost("/api/nodes/{slot:int}/active", (int slot, SetActiveRequest r) => ApiEndpoints.SetNodeActive(slot, r));
         app.MapPost("/api/nodes/{slot:int}/value", (int slot, SetValueRequest r) => ApiEndpoints.SetNodeValue(slot, r));
         app.MapGet("/api/state", () => ApiEndpoints.GetApplicationState());
-        app.MapPost("/api/performance", (SetPerformanceModeRequest r) => ApiEndpoints.SetPerformanceMode(r));
     }
 }
 

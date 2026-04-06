@@ -49,7 +49,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Grid.Column="1"
@@ -57,13 +56,6 @@
                                Foreground="White"
                                FontSize="12"
                                VerticalAlignment="Center"/>
-
-                    <Button x:Name="ConvertButton"
-                            Grid.Column="2"
-                            Content="Convert"
-                            Width="60"
-                            Height="30"
-                            Margin="4,0,4,0"/>
                     
                 </Grid>
                 

@@ -16,16 +16,13 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Concurrent;
-using Melanchall.DryWetMidi.Multimedia;
-using Melanchall.DryWetMidi.Core;
-
 namespace Diffracta;
 
 // ============================================================================
 // MAIN WINDOW - Primary application window for Diffracta shader application
 // ============================================================================
 // This class manages the main UI, shader loading, post-processing pipeline,
-// MIDI integration, file management, and performance mode.
+    // file management.
 // ============================================================================
 public partial class MainWindow : Window, INotifyPropertyChanged {
     
@@ -41,65 +38,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private readonly StringBuilder _logBuffer = new();
     private bool _isLogPanelVisible = false;
     
-    // Performance mode state
-    private bool _isPerformanceMode = false;
-    
-    // Tempo/Clock management
-    private MainTempo _globalTempoNumber;
-    private bool _isTempoRunning = false;
-    
     // Child window management
-    private ChildWindow1? _childWindow1;
     private ChildWindow2? _childWindow2;
-    
-    // ========================================================================
-    // CENTRALIZED TIMER MANAGEMENT - Single timer for all periodic updates
-    // ========================================================================
-    private DispatcherTimer? _globalUpdateTimer;
-    private readonly List<Action> _timerCallbacks = new();
-    private int _tempoTickCounter = 0; // Count ticks for 1-second tempo updates (10 ticks at 100ms)
-    private const int GLOBAL_TIMER_INTERVAL_MS = 100; // 10 updates per second base rate
-    private const int TEMPO_TICKS_PER_SECOND = 10; // 1000ms / 100ms = 10 ticks
-    
-    // MIDI device state
-    private InputDevice? _activeMidiDevice;
-    private readonly ObservableCollection<string> _midiInEvents = new();
-    
-    // Post-process slot state management (3 slots for shader effects)
+
+    // Media and project state
+    private readonly ObservableCollection<string> _mediaDirectories = new();
+    private readonly MainTempo _globalTempoNumber = new();
     private readonly bool[] _slotActiveStates = new bool[3];
     private readonly float[] _slotValues = new float[3];
-    
-    // Directory browsing state
-    private string _currentDirectoryPath = string.Empty;
     private readonly List<string> _fullDirectoryItems = new();
-    
-    // Global media directories list (accessible from all pages)
-    private readonly ObservableCollection<string> _mediaDirectories = new();
-    
-    // Video library for managing video files and metadata
-    private readonly VideoLibrary _videoLibrary = new();
-    
-    // Pad-to-media mapping: pad number (1-32) -> media path (shader or video)
-    private readonly Dictionary<int, string> _padMediaMapping = new();
-    
-    // Project size for consistent video/output resolution
+    private string _currentDirectoryPath = string.Empty;
     private int _projectWidth = 1920;
     private int _projectHeight = 1080;
-    
-    // ========================================================================
-    // PUBLIC EVENTS
-    // ========================================================================
-    
+
+    // Global timer state
+    private const int GLOBAL_TIMER_INTERVAL_MS = 16;
+    private DispatcherTimer? _globalUpdateTimer;
+    private readonly List<Action> _timerCallbacks = new();
+
+    // INotifyPropertyChanged event
     public new event PropertyChangedEventHandler? PropertyChanged;
-    
-    // ========================================================================
-    // PUBLIC PROPERTIES - For API access
-    // ========================================================================
-    
-    /// <summary>
-    /// Gets whether performance mode is currently active.
-    /// </summary>
-    public bool IsPerformanceMode => _isPerformanceMode;
     
     /// <summary>
     /// Gets the global list of media directory paths (accessible from all pages).
@@ -107,9 +65,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     public ObservableCollection<string> MediaDirectories => _mediaDirectories;
     
     /// <summary>
-    /// Gets the video library instance (accessible from all pages).
+    /// Legacy tempo binding source for compiled controls.
     /// </summary>
-    public VideoLibrary VideoLibrary => _videoLibrary;
+    public MainTempo Tempo => _globalTempoNumber;
     
     /// <summary>
     /// Adds a directory path to the media directories list if it doesn't already exist.
@@ -144,9 +102,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     public MainWindow() {
         InitializeComponent();
         
-        // Initialize global tempo number
-        _globalTempoNumber = new MainTempo();
-        
         // Set up data binding
         DataContext = this;
 
@@ -172,12 +127,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 SetupWatcher();
                 UpdateTabContent();
                 
-                // Wire MIDI UI when available
-                var midiInList = this.FindControl<ListBox>("MidiInEventsList");
-                if (midiInList != null) midiInList.ItemsSource = _midiInEvents;
-                var midiList = this.FindControl<ListBox>("MidiDevicesList");
-                if (midiList != null) midiList.SelectionChanged += OnMidiDeviceSelected;
-                
                 // Start centralized global update timer
                 StartGlobalUpdateTimer();
                 
@@ -199,19 +148,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 
                 // Wire up MenuBar styling and hover effects
                 WireUpMenuBarStyling();
+                WireUpMainWindowControls();
                 
                 // Initialize with controls page
                 SwitchToPage(1);
                 
-                // Load initial frame (SMPTE color bars image)
-                var initialImagePath = "avares://Diffracta/Media/default/smpte_color_bars.png";
-                if (Surface != null)
-                {
-                    Surface.LoadImageFromAvares(initialImagePath, out var message);
-                    LogMessage($"Loaded initial frame: smpte_color_bars.png");
-                }
-                
-                LogMessage("Ready - Select a shader from the dropdown or use launchpad");
+                LogMessage("Ready - Select a shader from the dropdown");
             }
             catch (Exception ex)
             {
@@ -222,118 +164,92 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "error.log");
                     System.IO.File.AppendAllText(logPath, $"[{DateTime.Now}] FATAL ERROR in Loaded: {ex.Message}\n{ex.StackTrace}\n\n");
                 }
-                catch { }
-            }
-        };
-        
-        Closed += (_, __) => {
-            // Clean up all timers on window close
-            StopGlobalUpdateTimer();
-        };
-
-        // Toolbar button handlers
-        PerformanceButton.Click += (_, __) => {
-            TogglePerformanceMode();
-        };
-
-        LogsButton.Click += (_, __) => {
-            ToggleLogPanel();
-        };
-
-        // Log panel button handlers
-        ClearLogButton.Click += (_, __) => {
-            _logBuffer.Clear();
-            LogTextBox.Text = string.Empty;
-            LogScrollViewer.ScrollToEnd();
-        };
-
-        CopyLogButton.Click += (_, __) => {
-            var text = LogTextBox.Text;
-            if (!string.IsNullOrEmpty(text))
-            {
-                // Copy to clipboard
-                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-                clipboard?.SetTextAsync(text);
-                LogMessage("Log copied to clipboard");
-            }
-        };
-
-        // Page navigation event handlers
-        Page1Button.Click += (_, __) => SwitchToPage(1);
-        Page2Button.Click += (_, __) => SwitchToPage(2);
-        Page3Button.Click += (_, __) => SwitchToPage(3);
-        Page4Button.Click += (_, __) => SwitchToPage(4);
-
-        // Child window menu items
-        ChildWindow1MenuItem.Click += (_, __) => ToggleChildWindow1();
-        ChildWindow2MenuItem.Click += (_, __) => ToggleChildWindow2();
-
-        // Handle Escape key to exit performance mode
-        KeyDown += (_, e) => {
-            if (e.Key == Avalonia.Input.Key.Escape && _isPerformanceMode)
-            {
-                ExitPerformanceMode();
+                catch (Exception logEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Could not write to error log: {logEx.Message}");
+                }
             }
         };
     }
-    
-    // ========================================================================
-    // MENUBAR STYLING - Apply custom styling and hover effects
-    // ========================================================================
-    
+
     /// <summary>
-    /// Wires up MenuBar styling, hover effects, and popup styling similar to Utils_ComboBox
+    /// Populates media picker with shader files only.
     /// </summary>
-    private void WireUpMenuBarStyling()
+    private void PopulatePicker(Page1 page)
     {
-        Utils_MenuBar.WireUpMenuBarStyling(MenuBar);
+        var shaderItems = Directory.GetFiles(_shaderDir, "*.glsl")
+            .Select(System.IO.Path.GetFileName)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Select(name => name!)
+            .OrderBy(name => name)
+            .ToList();
+
+        var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
+        if (mediaPicker != null)
+        {
+            mediaPicker.ItemsSource = shaderItems;
+            if (shaderItems.Count > 0)
+            {
+                mediaPicker.SelectedIndex = 0;
+            }
+        }
     }
-    
-    // ========================================================================
-    // SHADER MANAGEMENT - File operations and shader loading
-    // ========================================================================
-    
+
     /// <summary>
-    /// Populates the media picker dropdown with available shaders and videos
+    /// Wires up top-level window controls and menu items.
     /// </summary>
-    private void PopulatePicker(Page1? page = null) {
-        // Get shader files
-        var shaderItems = Directory.EnumerateFiles(_shaderDir, "*.glsl")
-            .OrderBy(p => System.IO.Path.GetFileName(p))
-            .Select(p => System.IO.Path.GetFileName(p))
-            .ToList();
+    private void WireUpMainWindowControls()
+    {
+        var logsButton = this.FindControl<Button>("LogsButton");
+        if (logsButton != null)
+        {
+            logsButton.Click += (_, __) => ToggleLogPanel();
+        }
 
-        // Get video files from library
-        var videoItems = _videoLibrary.Videos.Values
-            .OrderBy(v => v.FileName)
-            .Select(v => v.FileName)
-            .ToList();
+        var clearLogButton = this.FindControl<Button>("ClearLogButton");
+        if (clearLogButton != null)
+        {
+            clearLogButton.Click += (_, __) =>
+            {
+                _logBuffer.Clear();
+                LogTextBox.Text = string.Empty;
+            };
+        }
 
-        // Combine shaders and videos (shaders first, then videos)
-        var allItems = new List<string>();
-        allItems.AddRange(shaderItems);
-        allItems.AddRange(videoItems);
-
-        if (page != null) {
-            var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
-            if (mediaPicker != null) {
-                mediaPicker.ItemsSource = allItems;
-                if (allItems.Count > 0) {
-                    mediaPicker.SelectedIndex = 0;
+        var copyLogButton = this.FindControl<Button>("CopyLogButton");
+        if (copyLogButton != null)
+        {
+            copyLogButton.Click += async (_, __) =>
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(_logBuffer.ToString());
+                    LogMessage("Copied logs to clipboard");
                 }
-            }
-            
-            // Populate pad picker with pad names (S01-S32)
-            var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
-            if (slotPicker != null) {
-                var slotNames = Enumerable.Range(1, 32)
-                    .Select(i => $"S{i:D2}")
-                    .ToList();
-                slotPicker.ItemsSource = slotNames;
-                if (slotNames.Count > 0) {
-                    slotPicker.SelectedIndex = 0;
+                else
+                {
+                    LogMessage("Clipboard not available");
                 }
-            }
+            };
+        }
+
+        var page1Button = this.FindControl<Button>("Page1Button");
+        if (page1Button != null)
+        {
+            page1Button.Click += (_, __) => SwitchToPage(1);
+        }
+
+        var page2Button = this.FindControl<Button>("Page2Button");
+        if (page2Button != null)
+        {
+            page2Button.Click += (_, __) => SwitchToPage(2);
+        }
+
+        var childWindow2MenuItem = this.FindControl<MenuItem>("ChildWindow2MenuItem");
+        if (childWindow2MenuItem != null)
+        {
+            childWindow2MenuItem.Click += (_, __) => ToggleChildWindow2();
         }
     }
 
@@ -361,6 +277,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             PopulatePicker(controlsPage);
         }
+    }
+
+    /// <summary>
+    /// Applies menu bar visual behavior.
+    /// </summary>
+    private void WireUpMenuBarStyling()
+    {
+        // Intentionally left minimal; menu behavior is driven primarily by XAML styles.
     }
 
     
@@ -402,160 +326,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         {
             LogMessage("Log panel closed");
         }
-    }
-    
-    // ========================================================================
-    // PERFORMANCE MODE - Fullscreen shader rendering mode
-    // ========================================================================
-    
-    /// <summary>
-    /// Toggles between normal and performance mode
-    /// </summary>
-    public void TogglePerformanceMode() {
-        if (_isPerformanceMode) {
-            ExitPerformanceMode();
-        } else {
-            EnterPerformanceMode();
-        }
-    }
-
-    /// <summary>
-    /// Enters performance mode: hides all UI, goes fullscreen, spans shader across entire viewport
-    /// </summary>
-    private void EnterPerformanceMode() {
-        _isPerformanceMode = true;
-        PerformanceButton.Content = "Exit Performance";
-        
-        // Hide all UI panels but keep the shader surface visible
-        MenuBar.IsVisible = false;
-        LeftSidebar.IsVisible = false;
-        PageSelectorBar.IsVisible = false;
-        TopToolbar.IsVisible = false;
-        ControlsPanel.IsVisible = false;
-        HorizontalSplitter.IsVisible = false;
-        
-        // Make TopRightPanel span the entire viewport and hide the tabbed panel
-        // Get the parent Border and set Grid properties on it
-        var topRightBorder = TopRightPanel.Parent as Avalonia.Controls.Border;
-        if (topRightBorder != null)
-        {
-            topRightBorder.SetValue(Grid.RowProperty, 0);
-            topRightBorder.SetValue(Grid.ColumnProperty, 0);
-            topRightBorder.SetValue(Grid.RowSpanProperty, 4); // Spans all 4 rows
-            topRightBorder.SetValue(Grid.ColumnSpanProperty, 4); // Spans all 4 columns
-        }
-        
-        // Hide the tabbed panel part (row 2) and splitter (row 1), show only shader surface (row 0)
-        // We'll do this by making the shader surface row take all space
-        var topRightGrid = TopRightPanel as Grid;
-        if (topRightGrid != null && topRightGrid.RowDefinitions.Count >= 3)
-        {
-            topRightGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
-            topRightGrid.RowDefinitions[1].Height = new GridLength(0);
-            topRightGrid.RowDefinitions[2].Height = new GridLength(0);
-        }
-        
-        // Make the shader surface fill the available space
-        // Surface is inside: innerBorder -> outerBorder -> Grid
-        var innerBorder = Surface.Parent as Border;
-        if (innerBorder != null)
-        {
-            innerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-            innerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-            innerBorder.Width = double.NaN;
-            innerBorder.Height = double.NaN;
-            
-            var outerBorder = innerBorder.Parent as Border;
-            if (outerBorder != null)
-            {
-                outerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-                outerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-                outerBorder.Padding = new Thickness(0);
-                outerBorder.Margin = new Thickness(0);
-            }
-        }
-        Surface.Width = double.NaN;
-        Surface.Height = double.NaN;
-        Surface.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        Surface.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-        
-        // Go fullscreen for Performance mode to use full viewport
-        WindowState = WindowState.FullScreen;
-        
-        // Hide mouse cursor in performance mode
-        Cursor = Avalonia.Input.Cursor.Parse("None");
-        
-        LogMessage("Entered performance mode - Full viewport shader, Press Escape to exit");
-        UpdateTabContent();
-    }
-    
-    /// <summary>
-    /// Exits performance mode: restores UI panels and normal window layout
-    /// </summary>
-    private void ExitPerformanceMode() {
-        _isPerformanceMode = false;
-        PerformanceButton.Content = "Performance";
-        
-        // Return to windowed mode
-        WindowState = WindowState.Normal;
-        
-        // Restore mouse cursor
-        Cursor = Avalonia.Input.Cursor.Parse("Arrow");
-        
-        // Restore TopRightPanel to normal position
-        // Get the parent Border and set Grid properties on it
-        var topRightBorder = TopRightPanel.Parent as Avalonia.Controls.Border;
-        if (topRightBorder != null)
-        {
-            topRightBorder.SetValue(Grid.RowProperty, 2);
-            topRightBorder.SetValue(Grid.ColumnProperty, 3);
-            topRightBorder.SetValue(Grid.RowSpanProperty, 2);
-            topRightBorder.SetValue(Grid.ColumnSpanProperty, 1);
-        }
-        
-        // Restore the grid row definitions
-        var topRightGrid = TopRightPanel as Grid;
-        if (topRightGrid != null && topRightGrid.RowDefinitions.Count >= 3)
-        {
-            topRightGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
-            topRightGrid.RowDefinitions[1].Height = new GridLength(3);
-            topRightGrid.RowDefinitions[2].Height = new GridLength(3, GridUnitType.Star);
-        }
-        
-        // Restore shader surface to original size and position
-        // Surface is inside: innerBorder -> outerBorder -> Grid
-        var innerBorder = Surface.Parent as Border;
-        if (innerBorder != null)
-        {
-            innerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
-            innerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
-            innerBorder.Width = 202;
-            innerBorder.Height = 114;
-            
-            var outerBorder = innerBorder.Parent as Border;
-            if (outerBorder != null)
-            {
-                outerBorder.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-                outerBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-                outerBorder.Padding = new Thickness(6);
-                outerBorder.Margin = new Thickness(0, 0, 0, 2);
-            }
-        }
-        Surface.Width = 200;
-        Surface.Height = 112;
-        Surface.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        Surface.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-        
-        // Show all panels again
-        MenuBar.IsVisible = true;
-        LeftSidebar.IsVisible = true;
-        PageSelectorBar.IsVisible = true;
-        TopToolbar.IsVisible = true;
-        ControlsPanel.IsVisible = true;
-        HorizontalSplitter.IsVisible = true;
-        
-        LogMessage("Exited performance mode");
-        UpdateTabContent();
     }
     
     // ========================================================================
@@ -639,150 +409,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     /// </summary>
     public float GetSlotValue(int slot) => _slotValues[slot];
     
-    // ========================================================================
-    // TEMPO/CLOCK MANAGEMENT - Global tempo tracking and display
-    // ========================================================================
-    
-    /// <summary>
-    /// Handles pad click events from the launchpad
-    /// </summary>
-    private void OnTouchpadClicked(object? sender, int padNumber)
-    {
-        LogMessage($"Pad {padNumber:D2} clicked");
-        
-        // Check if this pad has media assigned
-        if (_padMediaMapping.TryGetValue(padNumber, out var mediaPath))
-        {
-            // Determine if it's a shader or video
-            bool isShader = mediaPath.EndsWith(".glsl", StringComparison.OrdinalIgnoreCase) && File.Exists(mediaPath);
-            
-            if (isShader)
-            {
-                // Load shader
-                if (Surface != null)
-                {
-                    Surface.LoadFragmentShaderFromFile(mediaPath, out var message);
-                    LogMessage($"Loaded shader: {System.IO.Path.GetFileName(mediaPath)}");
-                }
-                
-                // Sync Child Window 2 if open
-                if (_childWindow2 != null && _childWindow2.IsVisible)
-                {
-                    _childWindow2.LoadShaderFromFile(mediaPath);
-                    _childWindow2.SyncShaderState();
-                }
-                
-                UpdateTabContent();
-            }
-            else
-            {
-                // It's a video - check if it exists in library
-                var video = _videoLibrary.GetVideo(mediaPath);
-                string videoPath = mediaPath;
-                
-                if (video != null)
-                {
-                    videoPath = video.FilePath;
-                    LogMessage($"Video found in library: {video.FileName} ({video.Width}x{video.Height}, {video.FrameCount} frames)");
-                }
-                else
-                {
-                    // Video not in library, but try to load it directly if file exists
-                    if (File.Exists(mediaPath))
-                    {
-                        LogMessage($"Video not in library, loading directly: {Path.GetFileName(mediaPath)}");
-                    }
-                    else
-                    {
-                        LogMessage($"Video file not found: {mediaPath}");
-                        return;
-                    }
-                }
-                
-                // Load video into shader surface
-                if (Surface != null)
-                {
-                    Surface.LoadVideo(videoPath, out var message);
-                    LogMessage($"Video assigned to pad {padNumber:D2}: {Path.GetFileName(videoPath)}");
-                    LogMessage(message);
-                }
-                
-                // Sync Child Window 2 if open (videos can be displayed there too if needed)
-                // Note: ChildWindow2 may need video support added separately if desired
-                
-                UpdateTabContent();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Handles tempo button press - starts or stops the global tempo clock
-    /// </summary>
-    private void OnTempoButtonPressed(object? sender, RoutedEventArgs e)
-    {
-        LogMessage("=== TEMPO BUTTON CLICKED ===");
-        LogMessage($"Tempo button pressed - Current state: {(_isTempoRunning ? "Running" : "Stopped")}");
-        
-        if (_isTempoRunning)
-        {
-            StopTempo();
-        }
-        else
-        {
-            StartTempo();
-        }
-    }
-
-    /// <summary>
-    /// Handles reset button click - stops tempo and resets counter
-    /// </summary>
-    private void OnResetButtonClicked(object? sender, RoutedEventArgs e)
-    {
-        StopTempo();
-        _globalTempoNumber.Reset();
-        LogMessage("Tempo reset");
-    }
-
-    /// <summary>
-    /// Starts the tempo - uses global timer, no separate timer needed
-    /// </summary>
-    private void StartTempo()
-    {
-        _isTempoRunning = true;
-        _tempoTickCounter = 0; // Reset counter
-        
-        // Ensure global timer is running
-        if (_globalUpdateTimer == null)
-        {
-            StartGlobalUpdateTimer();
-        }
-        
-        // Notify UI of button state changes
-        OnPropertyChanged(nameof(TempoButtonText));
-        OnPropertyChanged(nameof(TempoButtonBackground));
-        
-        LogMessage("Tempo started");
-    }
-
-    /// <summary>
-    /// Stops the tempo - no cleanup needed, just set flag
-    /// </summary>
-    private void StopTempo()
-    {
-        _isTempoRunning = false;
-        
-        // Notify UI of button state changes
-        OnPropertyChanged(nameof(TempoButtonText));
-        OnPropertyChanged(nameof(TempoButtonBackground));
-        
-        LogMessage($"Tempo stopped - Total time: {_globalTempoNumber.TimeDisplay}");
-    }
-
-    // Properties for data binding
-    public MainTempo Tempo => _globalTempoNumber;
-    public string TempoButtonText => _isTempoRunning ? "Stop Clock" : "Start Clock";
-    public string TempoButtonBackground => _isTempoRunning ? "#ff8c00" : "#d3d3d3";
-    
     /// <summary>
     /// Project width for consistent output resolution (globally changeable)
     /// </summary>
@@ -850,41 +476,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // ========================================================================
     
     /// <summary>
-    /// Updates the content of tabs (Global, MIDI) with current information
+    /// Updates the content of tabs with current information
     /// </summary>
     private void UpdateTabContent()
     {
-
-        // Populate MIDI devices list in Global tab
-        var midiList = this.FindControl<ListBox>("MidiDevicesList");
-        if (midiList != null)
-        {
-            try
-            {
-                var names = new List<string>();
-                foreach (var device in InputDevice.GetAll())
-                {
-                    try { names.Add(device.Name); }
-                    finally { device.Dispose(); } // Ensure disposal even on exception
-                }
-
-                if (names.Count == 0)
-                {
-                    midiList.ItemsSource = new[] { "None" };
-                }
-                else
-                {
-                    midiList.ItemsSource = names.OrderBy(n => n).ToList();
-                    // auto-select first if none selected
-                    if (midiList.SelectedIndex < 0)
-                        midiList.SelectedIndex = 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                midiList.ItemsSource = new[] { $"Error: {ex.Message}" };
-            }
-        }
     }
 
     /// <summary>
@@ -916,17 +511,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     }
                 }
                 
-                // Handle tempo updates (every 10 ticks = 1 second)
-                if (_isTempoRunning)
-                {
-                    _tempoTickCounter++;
-                    if (_tempoTickCounter >= TEMPO_TICKS_PER_SECOND)
-                    {
-                        _tempoTickCounter = 0;
-                        _globalTempoNumber.Increment();
-                        LogMessage($"Global Tempo: {_globalTempoNumber.TimeDisplay} (Seconds: {_globalTempoNumber.Seconds})");
-                    }
-                }
             }
             catch (Exception ex)
             {
@@ -956,7 +540,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
         
         _timerCallbacks.Clear();
-        _tempoTickCounter = 0;
         System.Diagnostics.Debug.WriteLine("Global update timer stopped and cleaned up");
     }
     
@@ -998,16 +581,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 WireUpToolsPage(toolsPage);
                 LogMessage("Switched to Tools page");
                 break;
-            case 3:
-                var settingsPage = new Page3();
-                PageContentControl.Content = settingsPage;
-                settingsPage.SetParentWindow(this);
-                LogMessage("Switched to Settings page");
-                break;
-            case 4:
-                PageContentControl.Content = new Page4();
-                LogMessage("Switched to Help page");
-                break;
         }
     }
 
@@ -1019,91 +592,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         // Find controls and wire up events
         var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
         var applyButton = page.FindControl<Button>("ApplyButton");
-        var slotPicker = page.FindControl<Utils_ComboBox>("SlotPicker");
-        var tempoButton = page.FindControl<Button>("TempoButton");
-        var resetButton = page.FindControl<Button>("ResetButton");
+        var previewSurface = page.FindControl<Diffracta.Graphics.ShaderSurface>("Page1MainTexturePreview");
         var projectWidthInput = page.FindControl<TextBox>("ProjectWidthInput");
         var projectHeightInput = page.FindControl<TextBox>("ProjectHeightInput");
+
+        if (previewSurface != null)
+        {
+            previewSurface.SetProjectSize(_projectWidth, _projectHeight);
+        }
         
         // Wire up project size inputs - changes are handled via data binding
         // The TextBox controls are bound to ProjectWidth/ProjectHeight properties
         // which automatically update the shader surface when changed
-        
-        // Wire up Apply button to assign media to selected pad
-        if (applyButton != null && mediaPicker != null && slotPicker != null)
-        {
-            applyButton.Click += (_, __) =>
-            {
-                var selectedMedia = mediaPicker.SelectedItem as string;
-                var selectedSlot = slotPicker.SelectedItem as string;
-                
-                if (string.IsNullOrWhiteSpace(selectedMedia))
-                {
-                    LogMessage("Please select a media item");
-                    return;
-                }
-                
-                if (string.IsNullOrWhiteSpace(selectedSlot))
-                {
-                    LogMessage("Please select a slot");
-                    return;
-                }
-                
-                // Extract pad number from slot string (e.g., "S01" -> 1)
-                if (selectedSlot.StartsWith("S") && selectedSlot.Length >= 3)
-                {
-                    if (int.TryParse(selectedSlot.Substring(1), out int padNumber))
-                    {
-                        // Determine if it's a shader or video
-                        string mediaPath;
-                        bool isShader = File.Exists(System.IO.Path.Combine(_shaderDir, selectedMedia));
-                        
-                        if (isShader)
-                        {
-                            mediaPath = System.IO.Path.Combine(_shaderDir, selectedMedia);
-                        }
-                        else
-                        {
-                            // Find video in library
-                            var video = _videoLibrary.Videos.Values.FirstOrDefault(v => v.FileName == selectedMedia);
-                            if (video == null)
-                            {
-                                LogMessage($"Video not found in library: {selectedMedia}");
-                                return;
-                            }
-                            mediaPath = video.FilePath;
-                        }
-                        
-                        // Store mapping
-                        _padMediaMapping[padNumber] = mediaPath;
-                        LogMessage($"Assigned {selectedMedia} to pad {padNumber:D2}");
-                        
-                        // Preload video if it's a video (not a shader)
-                        if (!isShader && Surface != null)
-                        {
-                            Surface.PreloadVideo(mediaPath);
-                        }
-                    }
-                }
-            };
-        }
-        
-        if (tempoButton != null)
-        {
-            tempoButton.Click += OnTempoButtonPressed;
-        }
-        
-        if (resetButton != null)
-        {
-            resetButton.Click += OnResetButtonClicked;
-        }
-        
-        // Wire up launchpad pad clicks
-        var launchpad = page.FindControl<Utils_Launchpad>("Launchpad");
-        if (launchpad != null)
-        {
-            launchpad.PadClicked += OnTouchpadClicked;
-        }
         
         // Wire up slot controls
         var slot1Toggle = page.FindControl<Button>("Slot1Toggle");
@@ -1121,6 +621,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (slot1Slider != null) slot1Slider.ValueChanged += OnSlot1ValueChanged;
         if (slot2Slider != null) slot2Slider.ValueChanged += OnSlot2ValueChanged;
         if (slot3Slider != null) slot3Slider.ValueChanged += OnSlot3ValueChanged;
+
+        if (applyButton != null)
+        {
+            applyButton.Click += (_, __) => ApplySelectedShader(page);
+        }
+    }
+
+    /// <summary>
+    /// Loads the selected shader from Page1 into the main surface.
+    /// </summary>
+    private void ApplySelectedShader(Page1 page)
+    {
+        var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
+        if (mediaPicker?.SelectedItem is not string selectedShader || string.IsNullOrWhiteSpace(selectedShader))
+        {
+            LogMessage("No shader selected");
+            return;
+        }
+
+        var shaderPath = System.IO.Path.Combine(_shaderDir, selectedShader);
+        if (!File.Exists(shaderPath))
+        {
+            LogMessage($"Shader file not found: {selectedShader}");
+            return;
+        }
+
+        if (Surface == null)
+        {
+            LogMessage("Shader surface not available");
+            return;
+        }
+
+        Surface.LoadFragmentShaderFromFile(shaderPath, out var message);
+        LogMessage($"Applied shader: {selectedShader}");
+        LogMessage(message);
+
+        var previewSurface = page.FindControl<Diffracta.Graphics.ShaderSurface>("Page1MainTexturePreview");
+        if (previewSurface != null)
+        {
+            previewSurface.SetProjectSize(_projectWidth, _projectHeight);
+            previewSurface.LoadFragmentShaderFromFile(shaderPath, out _);
+        }
+
+        if (_childWindow2 != null && _childWindow2.IsVisible)
+        {
+            _childWindow2.LoadShaderFromFile(shaderPath);
+            _childWindow2.SyncShaderState();
+        }
     }
     
     /// <summary>
@@ -1358,11 +906,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 .Select(name => $"[DIR] {name}")
                 .ToList();
 
-            // Get files
+            // Get shader files only
             var files = Directory.GetFiles(directoryPath)
                 .Select(System.IO.Path.GetFileName)
                 .Where(name => !string.IsNullOrEmpty(name))
                 .Select(name => name!)
+                .Where(name => string.Equals(System.IO.Path.GetExtension(name), ".glsl", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(name => name)
                 .ToList();
 
@@ -1421,179 +970,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
 
-    
-    // ========================================================================
-    // MIDI DEVICE MANAGEMENT - MIDI input device handling
-    // ========================================================================
-    
-    /// <summary>
-    /// Handles MIDI device selection from the dropdown list
-    /// </summary>
-    private void OnMidiDeviceSelected(object? sender, SelectionChangedEventArgs e)
-    {
-        var list = sender as ListBox;
-        var name = list?.SelectedItem as string;
-        if (string.IsNullOrWhiteSpace(name) || name == "None") return;
-        TryOpenMidiDevice(name);
-    }
-
-    /// <summary>
-    /// Attempts to open a MIDI input device by name
-    /// Safely disposes previous device before opening new one
-    /// </summary>
-    private void TryOpenMidiDevice(string name)
-    {
-        try
-        {
-            // Close previous device safely
-            if (_activeMidiDevice != null)
-            {
-                _activeMidiDevice.EventReceived -= OnMidiEventReceived;
-                if (_activeMidiDevice.IsListeningForEvents) _activeMidiDevice.StopEventsListening();
-                _activeMidiDevice.Dispose();
-                _activeMidiDevice = null;
-            }
-
-            var dev = InputDevice.GetByName(name);
-            if (dev == null)
-            {
-                _midiInEvents.Clear();
-                _midiInEvents.Add($"Device not found: {name}");
-                return;
-            }
-
-            _midiInEvents.Clear();
-            _midiInEvents.Add($"Opened: {name}");
-            dev.EventReceived += OnMidiEventReceived;
-            dev.StartEventsListening();
-            _activeMidiDevice = dev;
-        }
-        catch (Exception ex)
-        {
-            _midiInEvents.Add($"Error opening device: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Handles MIDI events received from the active input device
-    /// Thread-safe: Uses Dispatcher to update UI from MIDI thread
-    /// Filters out noisy real-time messages
-    /// </summary>
-    private void OnMidiEventReceived(object? sender, MidiEventReceivedEventArgs e)
-    {
-        try
-        {
-            // Filter noisy real-time messages
-            if (e.Event is SystemRealTimeEvent)
-                return;
-
-            string msg = FormatMidiEvent(e.Event);
-            
-            // Add to UI list, fail silently if too fast
-            Dispatcher.UIThread.Post(() =>
-            {
-                try
-                {
-                    _midiInEvents.Add(msg);
-                    
-                    // Keep only last 50 messages to prevent memory issues
-                    while (_midiInEvents.Count > 50)
-                        _midiInEvents.RemoveAt(0);
-                    
-                    // Auto-scroll to bottom
-                    var midiInList = this.FindControl<ListBox>("MidiInEventsList");
-                    if (midiInList != null && _midiInEvents.Count > 0)
-                    {
-                        midiInList.SelectedIndex = _midiInEvents.Count - 1;
-                        if (midiInList.SelectedItem != null)
-                            midiInList.ScrollIntoView(midiInList.SelectedItem);
-                    }
-                }
-                catch
-                {
-                    // If UI update fails, just skip this message (fail gracefully)
-                }
-            }, DispatcherPriority.Background);
-        }
-        catch
-        {
-            // Swallow exceptions from MIDI thread to prevent crashes
-        }
-    }
-
-    /// <summary>
-    /// Formats a MIDI event as a human-readable string with timestamp
-    /// </summary>
-    private static string FormatMidiEvent(Melanchall.DryWetMidi.Core.MidiEvent ev)
-    {
-        string ts = DateTime.Now.ToString("HH:mm:ss.fff");
-        if (ev is NoteOnEvent no)
-        {
-            return $"[{ts}] NoteOn ch {(int)no.Channel + 1} note {no.NoteNumber} vel {no.Velocity}";
-        }
-        if (ev is NoteOffEvent nf)
-        {
-            return $"[{ts}] NoteOff ch {(int)nf.Channel + 1} note {nf.NoteNumber} vel {nf.Velocity}";
-        }
-        if (ev is ControlChangeEvent cc)
-        {
-            return $"[{ts}] CC ch {(int)cc.Channel + 1} ctrl {(int)cc.ControlNumber} val {cc.ControlValue}";
-        }
-        if (ev is PitchBendEvent pb)
-        {
-            return $"[{ts}] PitchBend ch {(int)pb.Channel + 1} val {pb.PitchValue}";
-        }
-        if (ev is ProgramChangeEvent pc)
-        {
-            return $"[{ts}] Program ch {(int)pc.Channel + 1} prog {(int)pc.ProgramNumber}";
-        }
-        if (ev is ChannelAftertouchEvent ca)
-        {
-            return $"[{ts}] Aftertouch ch {(int)ca.Channel + 1} val {ca.AftertouchValue}";
-        }
-        // Fallback for unknown event types
-        return $"[{ts}] {ev.GetType().Name}";
-    }
-    
     // ========================================================================
     // CHILD WINDOW MANAGEMENT - Floating tempo display and viewport windows
     // ========================================================================
-    
-    /// <summary>
-    /// Toggles Child Window 1 (tempo display window)
-    /// Opens if closed, closes if open
-    /// </summary>
-    private void ToggleChildWindow1()
-    {
-        // If window exists and is visible, close it
-        if (_childWindow1 != null && _childWindow1.IsVisible)
-        {
-            _childWindow1.Close();
-            _childWindow1 = null;
-            LogMessage("Child Window 1 closed");
-            return;
-        }
-
-        // Create new child window if it doesn't exist or was closed
-        if (_childWindow1 == null || !_childWindow1.IsVisible)
-        {
-            _childWindow1 = new ChildWindow1();
-            
-            // Share the tempo object for real-time data binding
-            _childWindow1.SetSharedTempo(_globalTempoNumber);
-            
-            // Handle window closing to clean up
-            _childWindow1.Closed += (_, __) =>
-            {
-                _childWindow1 = null;
-                LogMessage("Child Window 1 closed");
-            };
-            
-            // Show the window (non-modal, floating)
-            _childWindow1.Show(this);
-            LogMessage("Child Window 1 opened");
-        }
-    }
     
     /// <summary>
     /// Toggles Child Window 2 (full-screen pipeline viewport)

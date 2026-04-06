@@ -4,7 +4,6 @@ using Avalonia.OpenGL;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Media;
-using FFMpegCore;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +12,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-using System.Buffers;
 
 namespace Diffracta.Graphics;
 
@@ -211,8 +209,6 @@ public sealed class ShaderSurface : OpenGlControlBase {
     private int _videoHeight = 0;
     private string? _currentVideoPath; // Path to video that should be loaded
     private string? _loadedVideoPath;  // Path to video that is currently loaded
-    private System.Threading.CancellationTokenSource? _videoCts; // Cancellation token for video decoding
-    private Task? _videoDecodeTask; // Track the video decoding task for proper cleanup
     private readonly object _videoFrameLock = new(); // Lock for video frame updates
     
     // Ring buffer for decoded YUV frames (CPU side)
@@ -229,9 +225,6 @@ public sealed class ShaderSurface : OpenGlControlBase {
     // Frame buffer for smoother playback (decode ahead)
     private readonly System.Collections.Concurrent.ConcurrentQueue<byte[]> _videoFrameQueue = new();
     private const int MAX_QUEUED_FRAMES = 3; // Decode 2-3 frames ahead for smooth playback
-    
-    private double _videoFps = 30.0; // Video frame rate
-    private int _videoFrameCount = 0; // Total frame count for looping
     
     // Video Preload Cache
     // ========================
@@ -793,71 +786,25 @@ public sealed class ShaderSurface : OpenGlControlBase {
                     using var stream = AssetLoader.Open(uri);
                     if (stream != null)
                     {
-                        // Get image dimensions first
+                        // Decode image using Avalonia and copy RGBA bytes directly.
                         using var tempBitmap = new Bitmap(stream);
                         var pixelSize = tempBitmap.PixelSize;
-                        stream.Position = 0; // Reset stream for FFMpeg
-                        
-                        // Use FFMpegCore to decode PNG to raw RGBA pixels (same approach as video frames)
                         var pixelData = new byte[pixelSize.Width * pixelSize.Height * 4];
-                        
-                        // Decode image using FFMpeg to get raw RGBA pixel data
-                        var tempFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
+                        var pixelHandle = System.Runtime.InteropServices.GCHandle.Alloc(pixelData, System.Runtime.InteropServices.GCHandleType.Pinned);
                         try
                         {
-                            // Write stream to temp file for FFMpeg
-                            using (var fileStream = File.Create(tempFilePath))
-                            {
-                                stream.CopyTo(fileStream);
-                            }
-                            
-                            // Decode using FFMpeg (same as video decoding)
-                            var frameSize = pixelSize.Width * pixelSize.Height * 4;
-                            var decodedFlag = new bool[1] { false };
-                            
-                            // Use Task.Run to handle async FFMpeg call synchronously
-                            Task.Run(async () =>
-                            {
-                                await FFMpegArguments
-                                    .FromFileInput(tempFilePath)
-                                    .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(new SingleFrameStream(frameSize, (frame) =>
-                                    {
-                                        if (frame.Length >= frameSize)
-                                        {
-                                            frame.Span.CopyTo(pixelData);
-                                            decodedFlag[0] = true;
-                                        }
-                                    })), options => options
-                                        .WithVideoCodec("rawvideo")
-                                        .ForceFormat("rawvideo")
-                                        .WithCustomArgument("-pix_fmt rgba")
-                                        .WithCustomArgument("-frames:v 1")
-                                        .WithCustomArgument("-an"))
-                                    .ProcessAsynchronously();
-                            }).GetAwaiter().GetResult();
-                            
-                            if (!decodedFlag[0])
-                            {
-                                _logCallback?.Invoke($"Warning: Failed to decode image pixels, using fallback");
-                                // Fallback: fill with gray
-                                Array.Fill(pixelData, (byte)128);
-                            }
-                            else
-                            {
-                                _logCallback?.Invoke($"Image decoded: {pixelSize.Width}x{pixelSize.Height}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logCallback?.Invoke($"Error decoding image: {ex.Message}");
-                            // Fallback: fill with gray
-                            Array.Fill(pixelData, (byte)128);
+                            var stride = pixelSize.Width * 4;
+                            tempBitmap.CopyPixels(
+                                new PixelRect(0, 0, pixelSize.Width, pixelSize.Height),
+                                pixelHandle.AddrOfPinnedObject(),
+                                pixelData.Length,
+                                stride);
                         }
                         finally
                         {
-                            // Clean up temp file
-                            try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
+                            pixelHandle.Free();
                         }
+                        _logCallback?.Invoke($"Image decoded: {pixelSize.Width}x{pixelSize.Height}");
                             
                             // Create or update texture
                             if (_imageTexture == 0)
@@ -870,16 +817,16 @@ public sealed class ShaderSurface : OpenGlControlBase {
                             _gl.glTexParameteri(GLLoader.GL_TEXTURE_2D, GLLoader.GL_TEXTURE_MAG_FILTER, (int)GLLoader.GL_LINEAR);
                             
                         // Upload texture data
-                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(pixelData, System.Runtime.InteropServices.GCHandleType.Pinned);
+                        var uploadHandle = System.Runtime.InteropServices.GCHandle.Alloc(pixelData, System.Runtime.InteropServices.GCHandleType.Pinned);
                         try
                         {
                             _gl.glTexImage2D(GLLoader.GL_TEXTURE_2D, 0, (int)GLLoader.GL_RGBA, 
                                 pixelSize.Width, pixelSize.Height, 0, 
-                                GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, handle.AddrOfPinnedObject());
+                                GLLoader.GL_RGBA, GLLoader.GL_UNSIGNED_BYTE, uploadHandle.AddrOfPinnedObject());
                         }
                         finally
                         {
-                            handle.Free();
+                            uploadHandle.Free();
                         }
                         
                         _imageWidth = pixelSize.Width;
@@ -1391,8 +1338,6 @@ public sealed class ShaderSurface : OpenGlControlBase {
     public void LoadFragmentShaderFromFile(string path, out string message) {
         _currentFragPath = path;
         _currentImagePath = null; // Clear image when loading shader
-        _currentVideoPath = null; // Clear video when loading shader
-        StopVideo(); // Stop any playing video
         message = "Shader path set successfully";
     }
     
@@ -1404,300 +1349,37 @@ public sealed class ShaderSurface : OpenGlControlBase {
     public void LoadImageFromAvares(string avaresPath, out string message) {
         _currentImagePath = avaresPath;
         _currentFragPath = null; // Clear shader when loading image
-        _currentVideoPath = null; // Clear video when loading image
-        StopVideo(); // Stop any playing video
         message = "Image path set successfully";
     }
     
     /// <summary>
-    /// Loads a video file and starts playing it in a loop.
-    /// Uses preloaded video if available for instant switching, otherwise loads on-demand.
-    /// The video will be displayed using the image display shader and can be processed through the VFX pipeline.
+    /// Video loading is disabled.
     /// </summary>
-    /// <param name="videoPath">Path to the video file</param>
-    /// <param name="message">Output message indicating success or failure</param>
-    public void LoadVideo(string videoPath, out string message) {
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
-        {
-            message = $"Video file not found: {videoPath}";
-            return;
-        }
-        
-        // Stop any currently playing video
-        StopVideo();
-        
-        // Clear frame queue and reset texture state for new video
-        while (_videoFrameQueue.TryDequeue(out _)) { } // Clear queue
-        _videoTextureInitialized = false; // Reset texture state
-        
-        // Clear shader and image when loading video - IMPORTANT: must clear loaded paths too
-        // This prevents the render loop from reloading the old shader
-        _currentFragPath = null;
-        _currentImagePath = null;
-        _loadedFragPath = null; // CRITICAL: Clear this so shader check doesn't reload old shader
-        _loadedImagePath = null;
-        
-        // Clear the current shader program so video shader can take over
-        // Don't set _program = 0 here, let the video shader be built instead
-        
-        // Ensure video dimensions are set (will be updated from preloaded or decode)
-        if (_videoWidth == 0) _videoWidth = _projectWidth;
-        if (_videoHeight == 0) _videoHeight = _projectHeight;
-        
-        _logCallback?.Invoke($"LoadVideo called: {Path.GetFileName(videoPath)}");
-        
-        // Check if video is preloaded in cache
-        PreloadedVideo? preloaded = null;
-        lock (_cacheLock) {
-            if (_videoCache.TryGetValue(videoPath, out var cached)) {
-                preloaded = cached;
-            }
-        }
-        
-        if (preloaded != null && preloaded.IsPreloaded && preloaded.FirstFrame != null) {
-            // Use preloaded video for instant switching
-            _videoWidth = preloaded.Width;
-            _videoHeight = preloaded.Height;
-            _videoFps = preloaded.Fps;
-            _videoFrameCount = preloaded.FrameCount;
-            
-            // Upload first frame immediately
-            lock (preloaded.FrameLock) {
-                if (preloaded.FirstFrame != null) {
-                    lock (_videoFrameLock) {
-                        _pendingVideoFrame = preloaded.FirstFrame;
-                        _hasNewVideoFrame = true;
-                    }
-                }
-            }
-            
-            // Start using the preloaded video's decode stream
-            _currentVideoPath = videoPath;
-            // Don't set _loadedVideoPath yet - let render loop detect it and build shader
-            // This ensures the render loop's needsLoad check triggers and builds the shader
-            
-            // Ensure preloaded video decode is running
-            if (preloaded.DecodeTask == null || preloaded.DecodeTask.IsCompleted) {
-                StartPreloadedVideoDecode(videoPath);
-            }
-            
-            // NOTE: Don't build shader here - OpenGL context may not be available on UI thread
-            // The render loop will build it when _gl is available
-            
-            // Request immediate render to display the first frame
-            RequestNextFrameRendering();
-            
-            message = $"Video loaded instantly from cache: {Path.GetFileName(videoPath)}";
-            _logCallback?.Invoke(message);
-        } else {
-            // Video not preloaded - load on-demand immediately
-            // Set both paths so render loop picks it up
-            _currentVideoPath = videoPath;
-            _loadedVideoPath = null; // Clear so render loop detects it as new
-            
-            // NOTE: Don't build shader here - OpenGL context may not be available on UI thread
-            // The render loop will build the shader when _gl is available
-            
-            message = "Video path set successfully (loading on-demand)";
-            
-            // Request render to trigger loading and shader building
-            RequestNextFrameRendering();
-            
-            // Preload this video in background for future instant switching
-            _ = Task.Run(() => PreloadVideo(videoPath));
-        }
+    public void LoadVideo(string videoPath, out string message)
+    {
+        message = "Video loading has been removed.";
     }
     
-    /// <summary>
-    /// Preloads a video into memory cache for instant switching.
-    /// Decodes first frame immediately and starts background decode loop.
-    /// </summary>
-    /// <param name="videoPath">Path to the video file to preload</param>
-    public void PreloadVideo(string videoPath) {
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath)) {
-            return;
-        }
-        
-        lock (_cacheLock) {
-            // Check if already preloaded or in progress
-            if (_videoCache.ContainsKey(videoPath)) {
-                return; // Already preloaded or preloading
-            }
-            
-            // Create preload entry
-            var preloaded = new PreloadedVideo {
-                FilePath = videoPath,
-                IsPreloaded = false
-            };
-            _videoCache[videoPath] = preloaded;
-        }
-        
-        try {
-            // Decode first frame immediately
-            int frameSize = _projectWidth * _projectHeight * 4; // RGBA
-            
-            // Use a simple stream to capture first frame
-            var firstFrameReady = new System.Threading.ManualResetEventSlim(false);
-            byte[]? firstFrameData = null;
-            
-            using var firstFrameSink = new SingleFrameStream(frameSize, (frame) => {
-                if (frame.Length >= frameSize) {
-                    firstFrameData = frame.ToArray();
-                    firstFrameReady.Set();
-                }
-            });
-            
-            // Decode first frame
-            FFMpegArguments
-                .FromFileInput(videoPath)
-                .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(firstFrameSink), options => options
-                    .WithVideoCodec("rawvideo")
-                    .ForceFormat("rawvideo")
-                    .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}")
-                    .WithCustomArgument("-pix_fmt rgba")
-                    .WithCustomArgument("-frames:v 1")
-                    .WithCustomArgument("-an"))
-                .ProcessAsynchronously()
-                .GetAwaiter()
-                .GetResult();
-            
-            // Get video metadata
-            var info = FFProbe.AnalyseAsync(videoPath).GetAwaiter().GetResult();
-            var videoStream = info.PrimaryVideoStream;
-            
-            if (videoStream == null || firstFrameData == null) {
-                lock (_cacheLock) {
-                    _videoCache.Remove(videoPath);
-                }
-                return;
-            }
-            
-            // Store preloaded data
-            lock (_cacheLock) {
-                if (_videoCache.TryGetValue(videoPath, out var preloaded)) {
-                    preloaded.FirstFrame = firstFrameData;
-                    preloaded.Width = _projectWidth;
-                    preloaded.Height = _projectHeight;
-                    preloaded.Fps = videoStream.AvgFrameRate;
-                    if (preloaded.Fps <= 1e-3) preloaded.Fps = 30.0;
-                    preloaded.FrameCount = (int)((info.Duration.TotalSeconds * preloaded.Fps) + 0.5);
-                    preloaded.IsPreloaded = true;
-                }
-            }
-            
-            _logCallback?.Invoke($"Video preloaded: {Path.GetFileName(videoPath)}");
-            
-            // Start background decode loop for this preloaded video
-            StartPreloadedVideoDecode(videoPath);
-        }
-        catch (Exception ex) {
-            _logCallback?.Invoke($"Error preloading video {Path.GetFileName(videoPath)}: {ex.Message}");
-            lock (_cacheLock) {
-                _videoCache.Remove(videoPath);
-            }
-        }
+    public void PreloadVideo(string videoPath)
+    {
+        // Video preloading removed.
     }
     
-    /// <summary>
-    /// Starts background decoding for a preloaded video
-    /// </summary>
-    private void StartPreloadedVideoDecode(string videoPath) {
-        PreloadedVideo? preloaded;
-        lock (_cacheLock) {
-            if (!_videoCache.TryGetValue(videoPath, out preloaded) || !preloaded.IsPreloaded) {
-                return;
-            }
-            
-            // Cancel any existing decode task
-            try {
-                preloaded.DecodeCts?.Cancel();
-                preloaded.DecodeCts?.Dispose();
-            } catch { }
-            
-            preloaded.DecodeCts = new CancellationTokenSource();
-        }
-        
-        var ct = preloaded.DecodeCts.Token;
-        int frameSize = preloaded.Width * preloaded.Height * 4;
-        var frameDuration = TimeSpan.FromSeconds(1.0 / preloaded.Fps);
-        
-        preloaded.DecodeTask = Task.Run(async () => {
-            try {
-                while (!ct.IsCancellationRequested) {
-                    using var sink = new VideoFrameStream(frameSize, frameDuration, (frame) => {
-                        lock (preloaded.FrameLock) {
-                            preloaded.CurrentFrame = frame.ToArray();
-                            preloaded.HasNewFrame = true;
-                        }
-                    }, ct);
-                    
-                    try {
-                        await FFMpegArguments
-                            .FromFileInput(videoPath)
-                            .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(sink), options => options
-                                .WithVideoCodec("rawvideo")
-                                .ForceFormat("rawvideo")
-                                .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}")
-                                .WithCustomArgument("-pix_fmt rgba")
-                                .WithCustomArgument("-an"))
-                            .ProcessAsynchronously();
-                    }
-                    catch (OperationCanceledException) {
-                        break;
-                    }
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) {
-                _logCallback?.Invoke($"Error in preloaded video decode: {ex.Message}");
-            }
-        }, ct);
+    private void StartPreloadedVideoDecode(string videoPath)
+    {
+        // Video preloaded decode removed.
     }
     
-    /// <summary>
-    /// Stops video playback and cleans up video resources.
-    /// Non-blocking version for instant switching - cancels task but doesn't wait.
-    /// </summary>
-    private void StopVideo() {
-        // Cancel the decoding task (non-blocking for instant switching)
-        try {
-            _videoCts?.Cancel();
-        } catch { }
-        
-        // Don't wait for task completion - let it finish in background
-        // This allows instant switching between videos
-        // The task will complete and cleanup will happen asynchronously
-        
-        // Clean up cancellation token (but keep task reference for now)
-        try {
-            _videoCts?.Dispose();
-        } catch { }
-        _videoCts = null;
-        
-        // Note: We don't clear _videoDecodeTask here - let it finish in background
-        // This prevents blocking on task completion
-        
-        // Clear pending frame data (but keep texture visible until new one is ready)
-        lock (_videoFrameLock) {
-            _pendingVideoFrame = null;
-            _hasNewVideoFrame = false;
-        }
-        
+    private void StopVideo()
+    {
         _currentVideoPath = null;
-        // Don't clear _loadedVideoPath immediately - keep it until new video is ready
+        _loadedVideoPath = null;
+        _pendingVideoFrame = null;
+        _hasNewVideoFrame = false;
     }
     
-    /// <summary>
-    /// Cleans up old video task reference (called after new video starts)
-    /// </summary>
-    private void CleanupOldVideoTask() {
-        // Clean up old task reference if it's completed
-        if (_videoDecodeTask != null && _videoDecodeTask.IsCompleted) {
-            try {
-                _videoDecodeTask.Dispose();
-            } catch { }
-            _videoDecodeTask = null;
-        }
+    private void CleanupOldVideoTask()
+    {
     }
 
     // ========================
@@ -2063,334 +1745,9 @@ public sealed class ShaderSurface : OpenGlControlBase {
         return sh;
     }
     
-    // ========================
-    // Video Decoding Methods
-    // ========================
-    /// <summary>
-    /// Starts video decoding in a background task.
-    /// Decodes frames and uploads them to the video texture for rendering.
-    /// Optimized for instant switching - decodes first frame immediately.
-    /// </summary>
-    private void StartVideoDecoding(string filePath) {
-        // Clean up old task if completed (non-blocking)
-        CleanupOldVideoTask();
-        
-        // Stop any existing video (non-blocking - just cancels)
-        StopVideo();
-        
-        _videoCts = new CancellationTokenSource();
-        var ct = _videoCts.Token;
-        
-        // Start decoding in background task and track it
-        _videoDecodeTask = Task.Run(async () => {
-            try {
-                await VideoDecodeLoopAsync(filePath, ct);
-            }
-            catch (OperationCanceledException) {
-                // Expected when video is stopped - task completes normally
-            }
-            catch (Exception ex) {
-                _logCallback?.Invoke($"Video decoding error: {ex.Message}");
-            }
-        }, ct);
-        
-        // Configure task continuation for cleanup
-        _videoDecodeTask.ContinueWith(t => {
-            if (t.IsFaulted && t.Exception != null) {
-                _logCallback?.Invoke($"Video decode task faulted: {t.Exception.InnerException?.Message ?? "Unknown error"}");
-            }
-            // Clean up task reference when completed
-            try {
-                t.Dispose();
-            } catch { }
-        }, TaskContinuationOptions.ExecuteSynchronously);
-    }
-    
-    /// <summary>
-    /// Main video decoding loop. Decodes video frames and calls OnVideoFrameReady for each frame.
-    /// Automatically loops when the video ends.
-    /// Videos are scaled to project size during decoding for consistent output resolution.
-    /// Optimized for instant first frame display - decodes first frame immediately without waiting for analysis.
-    /// </summary>
-    private async Task VideoDecodeLoopAsync(string filePath, CancellationToken ct) {
-        try {
-            // Use project size for output (scale video to project size)
-            _videoWidth = _projectWidth;
-            _videoHeight = _projectHeight;
-            
-            int frameSize = _videoWidth * _videoHeight * 4; // RGBA (project size)
-            
-            // Start analysis in background (don't wait for it)
-            var infoTask = Task.Run(async () => await FFProbe.AnalyseAsync(filePath));
-            
-            // Decode first few frames immediately for instant display (don't wait for analysis)
-            // This allows instant video switching and smooth start
-            // CRITICAL: Track how many frames we decode so we can skip them in main loop (prevents double-playback bump)
-            int framesDecodedAhead = MAX_QUEUED_FRAMES;
-            try {
-                using var firstFrameSink = new VideoFrameStream(frameSize, TimeSpan.Zero, OnVideoFrameReady, ct);
-                
-                await FFMpegArguments
-                    .FromFileInput(filePath)
-                    .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(firstFrameSink), options => options
-                        .WithVideoCodec("rawvideo")
-                        .ForceFormat("rawvideo")
-                        .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}:flags=fast_bilinear") // Fast scaling
-                        .WithCustomArgument("-pix_fmt rgba")
-                        .WithCustomArgument($"-frames:v {MAX_QUEUED_FRAMES}") // Decode 2-3 frames ahead
-                        .WithCustomArgument("-an") // no audio
-                        .WithCustomArgument("-threads 2")) // Use 2 threads for faster decoding
-                    .ProcessAsynchronously();
-                
-                // Mark video as loaded now that first frame is ready
-                _loadedVideoPath = _currentVideoPath;
-            }
-            catch (OperationCanceledException) {
-                return; // Video was stopped
-            }
-            
-            // Get video metadata (analysis should be done by now, but wait if needed)
-            var info = await infoTask;
-            int nativeWidth = info.PrimaryVideoStream?.Width ?? 0;
-            int nativeHeight = info.PrimaryVideoStream?.Height ?? 0;
-            
-            if (nativeWidth <= 0 || nativeHeight <= 0) {
-                _logCallback?.Invoke($"Invalid video dimensions: {nativeWidth}x{nativeHeight}");
-                return;
-            }
-            
-            // Get video metadata
-            _videoFps = info.PrimaryVideoStream?.AvgFrameRate ?? 30.0;
-            if (_videoFps <= 1e-3) _videoFps = 30.0;
-            
-            var duration = info.Duration;
-            _videoFrameCount = (int)((duration.TotalSeconds * _videoFps) + 0.5);
-            
-            var frameDuration = TimeSpan.FromSeconds(1.0 / _videoFps);
-            
-            // Calculate seek time to skip already-decoded frames (prevents double-playback bump)
-            var seekTime = TimeSpan.FromSeconds(framesDecodedAhead / _videoFps);
-            
-            _logCallback?.Invoke($"Video decode started: {Path.GetFileName(filePath)} (native: {nativeWidth}x{nativeHeight}, scaled to: {_videoWidth}x{_videoHeight}, {_videoFps} fps, {_videoFrameCount} frames, skipping {framesDecodedAhead} frames to prevent bump)");
-            
-            // Continue decoding rest of video
-            // CRITICAL: Seek past the frames we already decoded to avoid double-playback bump
-            while (!ct.IsCancellationRequested) {
-                using var sink = new VideoFrameStream(frameSize, frameDuration, OnVideoFrameReady, ct);
-                
-                try {
-                    // Scale video to project size during decoding
-                    // Seek past the frames we already decoded to prevent the "bump"
-                    var optionsBuilder = new System.Action<FFMpegCore.FFMpegArgumentOptions>(options => {
-                        options
-                            .WithVideoCodec("rawvideo")
-                            .ForceFormat("rawvideo")
-                            .WithCustomArgument($"-vf scale={_projectWidth}:{_projectHeight}") // Scale to project size
-                            .WithCustomArgument("-pix_fmt rgba")
-                            .WithCustomArgument("-an"); // no audio
-                        
-                        // Only seek if we decoded frames ahead (skip them to prevent double-playback)
-                        if (framesDecodedAhead > 0 && seekTime.TotalSeconds > 0) {
-                            // Use -ss to skip already-decoded frames (prevents double-playback bump)
-                            options.WithCustomArgument($"-ss {seekTime.TotalSeconds:F6}"); // Seek to skip frames
-                        }
-                    });
-                    
-                    await FFMpegArguments
-                        .FromFileInput(filePath)
-                        .OutputToPipe(new FFMpegCore.Pipes.StreamPipeSink(sink), optionsBuilder)
-                        .ProcessAsynchronously();
-                }
-                catch (OperationCanceledException) {
-                    break; // Video was stopped
-                }
-                
-                // If we reach here, video finished - loop back to start (reset seek for next loop)
-                if (!ct.IsCancellationRequested) {
-                    _logCallback?.Invoke("Video finished, looping...");
-                    seekTime = TimeSpan.Zero; // Reset seek for next loop iteration
-                    framesDecodedAhead = 0; // Reset for next loop
-                }
-            }
-        }
-        catch (OperationCanceledException) {
-            // Expected when video is stopped
-        }
-        catch (Exception ex) {
-            _logCallback?.Invoke($"Video decode error: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// Callback when a new video frame is decoded.
-    /// Stores the frame data to be uploaded to GPU on next render.
-    /// Optimized: Queues frames ahead for smooth playback, prevents frame drops.
-    /// </summary>
-    private void OnVideoFrameReady(ReadOnlyMemory<byte> frame) {
-        var frameArray = frame.ToArray();
-        
-        // Queue frame for smooth playback (decode ahead)
-        // If queue is full, replace oldest frame to prevent memory buildup
-        if (_videoFrameQueue.Count >= MAX_QUEUED_FRAMES)
-        {
-            // Remove oldest frame to make room
-            _videoFrameQueue.TryDequeue(out _);
-        }
-        
-        // Add new frame to queue
-        _videoFrameQueue.Enqueue(frameArray);
-        
-        // Also set as pending for immediate display if queue was empty
-        lock (_videoFrameLock) {
-            _pendingVideoFrame = frameArray;
-            _hasNewVideoFrame = true;
-        }
-    }
-    
-    // Helper class for video frame streaming with looping support
-    private sealed class VideoFrameStream : Stream
+    private void StartVideoDecoding(string filePath)
     {
-        private readonly int _frameSize;
-        private readonly MemoryStream _buffer = new();
-        private readonly Action<ReadOnlyMemory<byte>> _onFrame;
-        private readonly TimeSpan _frameDuration;
-        private readonly CancellationToken _ct;
-        private DateTime _nextDue;
-
-        public VideoFrameStream(int frameSize, TimeSpan frameDuration, Action<ReadOnlyMemory<byte>> onFrame, CancellationToken ct)
-        {
-            _frameSize = frameSize;
-            _frameDuration = frameDuration;
-            _onFrame = onFrame;
-            _ct = ct;
-            _nextDue = DateTime.UtcNow;
-        }
-
-        public override bool CanRead => false;
-        public override bool CanSeek => false;
-        public override bool CanWrite => true;
-        public override long Length => _buffer.Length;
-        public override long Position { get => _buffer.Position; set => throw new NotSupportedException(); }
-        public override void Flush() { }
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            if (_ct.IsCancellationRequested) return;
-            _buffer.Write(buffer, offset, count);
-            TryDrain();
-        }
-        
-#if NET8_0_OR_GREATER
-        public override void Write(ReadOnlySpan<byte> buffer)
-        {
-            if (_ct.IsCancellationRequested) return;
-            _buffer.Write(buffer);
-            TryDrain();
-        }
-#endif
-        
-        private void TryDrain()
-        {
-            while (_buffer.Length >= _frameSize && !_ct.IsCancellationRequested)
-            {
-                _buffer.Position = 0;
-                var frameBytes = ArrayPool<byte>.Shared.Rent(_frameSize);
-                int read = _buffer.Read(frameBytes, 0, _frameSize);
-                _onFrame(new ReadOnlyMemory<byte>(frameBytes, 0, read));
-
-                // Throttle to target frame duration
-                if (_frameDuration > TimeSpan.Zero)
-                {
-                    var now = DateTime.UtcNow;
-                    if (now < _nextDue)
-                    {
-                        var sleep = _nextDue - now;
-                        if (sleep > TimeSpan.Zero && !_ct.IsCancellationRequested)
-                            Thread.Sleep(sleep);
-                    }
-                    _nextDue = _nextDue + _frameDuration;
-                }
-
-                // Compact remaining bytes
-                var remaining = (int)(_buffer.Length - _buffer.Position);
-                if (remaining > 0)
-                {
-                    var tmp = new byte[remaining];
-                    _buffer.Read(tmp, 0, remaining);
-                    _buffer.SetLength(0);
-                    _buffer.Position = 0;
-                    _buffer.Write(tmp, 0, remaining);
-                }
-                else
-                {
-                    _buffer.SetLength(0);
-                    _buffer.Position = 0;
-                }
-                ArrayPool<byte>.Shared.Return(frameBytes);
-            }
-        }
-    }
-    
-    // Helper class for single-frame image decoding
-    private sealed class SingleFrameStream : Stream
-    {
-        private readonly int _frameSize;
-        private readonly MemoryStream _buffer = new();
-        private readonly Action<ReadOnlyMemory<byte>> _onFrame;
-        private bool _frameReceived;
-
-        public SingleFrameStream(int frameSize, Action<ReadOnlyMemory<byte>> onFrame)
-        {
-            _frameSize = frameSize;
-            _onFrame = onFrame;
-        }
-
-        public override bool CanRead => false;
-        public override bool CanSeek => false;
-        public override bool CanWrite => true;
-        public override long Length => _buffer.Length;
-        public override long Position { get => _buffer.Position; set => throw new NotSupportedException(); }
-        public override void Flush() { }
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            if (!_frameReceived)
-            {
-                _buffer.Write(buffer, offset, count);
-                if (_buffer.Length >= _frameSize)
-                {
-                    _buffer.Position = 0;
-                    var frameBytes = new byte[_frameSize];
-                    int read = _buffer.Read(frameBytes, 0, _frameSize);
-                    _onFrame(new ReadOnlyMemory<byte>(frameBytes, 0, read));
-                    _frameReceived = true;
-                }
-            }
-        }
-
-#if NET8_0_OR_GREATER
-        public override void Write(ReadOnlySpan<byte> buffer)
-        {
-            if (!_frameReceived)
-            {
-                _buffer.Write(buffer);
-                if (_buffer.Length >= _frameSize)
-                {
-                    _buffer.Position = 0;
-                    var frameBytes = new byte[_frameSize];
-                    int read = _buffer.Read(frameBytes, 0, _frameSize);
-                    _onFrame(new ReadOnlyMemory<byte>(frameBytes, 0, read));
-                    _frameReceived = true;
-                }
-            }
-        }
-#endif
+        _logCallback?.Invoke("Video loading is disabled.");
     }
 }
 
