@@ -29,8 +29,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     // Media and project state
     private readonly bool[] _slotActiveStates = new bool[3];
     private readonly float[] _slotValues = new float[3];
-    private int _projectWidth = 1920;
-    private int _projectHeight = 1080;
 
     // Global timer state
     private const int GLOBAL_TIMER_INTERVAL_MS = 16;
@@ -60,7 +58,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 if (Surface != null)
                 {
                     Surface.SetLogCallback(LogMessage);
-                    Surface.SetProjectSize(_projectWidth, _projectHeight);
                 }
                 else
                 {
@@ -303,68 +300,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
     public float GetSlotValue(int slot) => _slotValues[slot];
     
-    /// <summary>
-    /// Project width for consistent output resolution (globally changeable)
-    /// </summary>
-    public string ProjectWidth
-    {
-        get => _projectWidth.ToString();
-        set
-        {
-            // Allow any positive integer value
-            if (int.TryParse(value, out int width) && width > 0)
-            {
-                if (_projectWidth != width)
-                {
-                    _projectWidth = width;
-                    OnPropertyChanged(nameof(ProjectWidth));
-                    // Update shader surface with new project size
-                    if (Surface != null)
-                    {
-                        Surface.SetProjectSize(_projectWidth, _projectHeight);
-                        LogMessage($"Project width changed to: {_projectWidth}");
-                    }
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Project height for consistent output resolution (globally changeable)
-    /// </summary>
-    public string ProjectHeight
-    {
-        get => _projectHeight.ToString();
-        set
-        {
-            // Allow any positive integer value
-            if (int.TryParse(value, out int height) && height > 0)
-            {
-                if (_projectHeight != height)
-                {
-                    _projectHeight = height;
-                    OnPropertyChanged(nameof(ProjectHeight));
-                    // Update shader surface with new project size
-                    if (Surface != null)
-                    {
-                        Surface.SetProjectSize(_projectWidth, _projectHeight);
-                        LogMessage($"Project height changed to: {_projectHeight}");
-                    }
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Gets the current project width as integer
-    /// </summary>
-    public int ProjectWidthInt => _projectWidth;
-    
-    /// <summary>
-    /// Gets the current project height as integer
-    /// </summary>
-    public int ProjectHeightInt => _projectHeight;
-    
     // ========================================================================
     // SHADER SURFACE UPDATE TIMER
     // ========================================================================
@@ -412,11 +347,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         var mediaPicker = page.FindControl<Utils_ComboBox>("MediaPicker");
         var applyButton = page.FindControl<Button>("ApplyButton");
         var previewSurface = page.FindControl<AvaloniaGlslPipeline.Graphics.ShaderSurface>("Page1MainTexturePreview");
-
-        if (previewSurface != null)
-        {
-            previewSurface.SetProjectSize(_projectWidth, _projectHeight);
-        }
         
         // Wire up slot controls
         var slot1Toggle = page.FindControl<Button>("Slot1Toggle");
@@ -473,7 +403,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         var previewSurface = page.FindControl<AvaloniaGlslPipeline.Graphics.ShaderSurface>("Page1MainTexturePreview");
         if (previewSurface != null)
         {
-            previewSurface.SetProjectSize(_projectWidth, _projectHeight);
             previewSurface.LoadFragmentShaderFromFile(shaderPath, out _);
         }
 

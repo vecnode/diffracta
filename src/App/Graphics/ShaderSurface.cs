@@ -281,7 +281,6 @@ public sealed class ShaderSurface : OpenGlControlBase {
         if (width > 0 && height > 0) {
             _projectWidth = width;
             _projectHeight = height;
-            _logCallback?.Invoke($"Project size set to: {_projectWidth}x{_projectHeight}");
         }
     }
     
